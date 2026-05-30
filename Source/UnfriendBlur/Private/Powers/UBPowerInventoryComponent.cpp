@@ -12,6 +12,8 @@
 #include "Powers/UBPowerMine.h"
 #include "Powers/UBPowerPickup.h"
 #include "Powers/UBPowerProjectile.h"
+#include "Vehicle/UBVehicleHealthComponent.h"
+#include "Vehicle/UBVehicleStatusComponent.h"
 #include "TimerManager.h"
 
 UUBPowerInventoryComponent::UUBPowerInventoryComponent()
@@ -29,6 +31,12 @@ void UUBPowerInventoryComponent::BeginPlay()
 	{
 		OwnerPrimitive->SetNotifyRigidBodyCollision(true);
 		OwnerPrimitive->OnComponentHit.AddUniqueDynamic(this, &UUBPowerInventoryComponent::HandleOwnerComponentHit);
+	}
+
+	if (AActor* OwnerActor = GetOwner(); OwnerActor && OwnerActor->HasAuthority())
+	{
+		UUBVehicleHealthComponent::FindOrCreateHealthComponent(OwnerActor);
+		UUBVehicleStatusComponent::FindOrCreateStatusComponent(OwnerActor);
 	}
 }
 
@@ -342,6 +350,11 @@ void UUBPowerInventoryComponent::ApplyPowerHitInternal(EUBPowerType PowerType, A
 		return;
 	}
 
+	if (OwnerActor->HasAuthority())
+	{
+		ApplyPowerGameplayOutcome(PowerType, SourceActor, bWeakenedHit);
+	}
+
 	UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(OwnerActor->GetRootComponent());
 	if (!Primitive || !Primitive->IsSimulatingPhysics())
 	{
@@ -386,6 +399,103 @@ void UUBPowerInventoryComponent::ApplyPowerHitInternal(EUBPowerType PowerType, A
 	else
 	{
 		ShowPowerMessage(FString::Printf(TEXT("Hit by %s"), *UBPowerTypeToString(PowerType)));
+	}
+}
+
+void UUBPowerInventoryComponent::ApplyPowerGameplayOutcome(EUBPowerType PowerType, AActor* SourceActor, bool bWeakenedHit)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		return;
+	}
+
+	const float Damage = GetDamageForPowerHit(PowerType, bWeakenedHit);
+	if (Damage > 0.0f)
+	{
+		if (UUBVehicleHealthComponent* HealthComponent = UUBVehicleHealthComponent::FindOrCreateHealthComponent(OwnerActor))
+		{
+			HealthComponent->ApplyDamage(Damage, SourceActor, PowerType);
+		}
+	}
+
+	const float SlowStrength = GetSlowStrengthForPowerHit(PowerType, bWeakenedHit);
+	const float SlowDuration = GetSlowDurationForPowerHit(PowerType, bWeakenedHit);
+	if (SlowStrength > 0.0f && SlowDuration > 0.0f)
+	{
+		if (UUBVehicleStatusComponent* StatusComponent = UUBVehicleStatusComponent::FindOrCreateStatusComponent(OwnerActor))
+		{
+			StatusComponent->ApplySlow(SlowStrength, SlowDuration, SourceActor, PowerType);
+		}
+	}
+}
+
+float UUBPowerInventoryComponent::GetDamageForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const
+{
+	switch (PowerType)
+	{
+	case EUBPowerType::Boost:
+		return 20.0f;
+	case EUBPowerType::Shield:
+		return 12.0f;
+	case EUBPowerType::Barge:
+		return 16.0f;
+	case EUBPowerType::Bolt:
+		return 18.0f;
+	case EUBPowerType::Shunt:
+		return bWeakenedHit ? 24.0f : 45.0f;
+	case EUBPowerType::Mine:
+		return 34.0f;
+	case EUBPowerType::Shock:
+		return 30.0f;
+	default:
+		return 0.0f;
+	}
+}
+
+float UUBPowerInventoryComponent::GetSlowStrengthForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const
+{
+	switch (PowerType)
+	{
+	case EUBPowerType::Boost:
+		return 0.28f;
+	case EUBPowerType::Shield:
+		return 0.18f;
+	case EUBPowerType::Barge:
+		return 0.25f;
+	case EUBPowerType::Bolt:
+		return 0.22f;
+	case EUBPowerType::Shunt:
+		return bWeakenedHit ? 0.34f : 0.62f;
+	case EUBPowerType::Mine:
+		return 0.46f;
+	case EUBPowerType::Shock:
+		return 0.68f;
+	default:
+		return 0.0f;
+	}
+}
+
+float UUBPowerInventoryComponent::GetSlowDurationForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const
+{
+	switch (PowerType)
+	{
+	case EUBPowerType::Boost:
+		return 0.8f;
+	case EUBPowerType::Shield:
+		return 0.5f;
+	case EUBPowerType::Barge:
+		return 0.9f;
+	case EUBPowerType::Bolt:
+		return 1.0f;
+	case EUBPowerType::Shunt:
+		return bWeakenedHit ? 1.4f : 2.5f;
+	case EUBPowerType::Mine:
+		return 2.0f;
+	case EUBPowerType::Shock:
+		return 2.8f;
+	default:
+		return 0.0f;
 	}
 }
 
@@ -823,11 +933,27 @@ void UUBPowerInventoryComponent::ActivateShield(bool bIsSuper)
 
 void UUBPowerInventoryComponent::ActivateRepair(bool bIsSuper)
 {
-	ShowPowerMessage(bIsSuper ? TEXT("SUPER Repair ready; health/damage system comes next") : TEXT("Repair ready; health/damage system comes next"));
-
-	if (const AActor* OwnerActor = GetOwner())
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor && OwnerActor->HasAuthority())
 	{
-		SpawnPowerFx(EUBPowerType::Repair, OwnerActor->GetActorLocation() + FVector::UpVector * 100.0f, OwnerActor->GetActorForwardVector(), bIsSuper ? 1.35f : 0.9f, bIsSuper ? 1.35f : 0.85f, false, bIsSuper);
+		if (UUBVehicleHealthComponent* HealthComponent = UUBVehicleHealthComponent::FindOrCreateHealthComponent(OwnerActor))
+		{
+			const float Repaired = HealthComponent->RepairDamage(bIsSuper ? 48.0f : 26.0f, OwnerActor);
+			ShowPowerMessage(FString::Printf(TEXT("%sRepair restored %.0f health"), bIsSuper ? TEXT("SUPER ") : TEXT(""), Repaired));
+		}
+
+		if (bIsSuper)
+		{
+			if (UUBVehicleStatusComponent* StatusComponent = UUBVehicleStatusComponent::FindOrCreateStatusComponent(OwnerActor))
+			{
+				StatusComponent->ClearNegativeStatus();
+			}
+		}
+	}
+
+	if (const AActor* FxOwnerActor = GetOwner())
+	{
+		SpawnPowerFx(EUBPowerType::Repair, FxOwnerActor->GetActorLocation() + FVector::UpVector * 100.0f, FxOwnerActor->GetActorForwardVector(), bIsSuper ? 1.35f : 0.9f, bIsSuper ? 1.35f : 0.85f, false, bIsSuper);
 	}
 }
 
@@ -999,10 +1125,8 @@ void UUBPowerInventoryComponent::ApplyRadialDeltaVelocity(float Radius, float De
 
 		if (UUBPowerInventoryComponent* OtherPowerComponent = OtherActor->FindComponentByClass<UUBPowerInventoryComponent>())
 		{
-			if (OtherPowerComponent->TryBlockIncomingPower(OwnerActor, PowerType))
-			{
-				continue;
-			}
+			OtherPowerComponent->ApplyPowerHitWithContext(PowerType, OwnerActor, DeltaVelocity, false);
+			continue;
 		}
 
 		UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(OtherActor->GetRootComponent());

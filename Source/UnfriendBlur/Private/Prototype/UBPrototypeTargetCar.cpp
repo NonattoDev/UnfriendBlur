@@ -4,6 +4,8 @@
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Powers/UBPowerInventoryComponent.h"
+#include "Vehicle/UBVehicleHealthComponent.h"
+#include "Vehicle/UBVehicleStatusComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
 AUBPrototypeTargetCar::AUBPrototypeTargetCar()
@@ -40,6 +42,8 @@ AUBPrototypeTargetCar::AUBPrototypeTargetCar()
 	MarkerLight->bUseInverseSquaredFalloff = false;
 
 	PowerInventory = CreateDefaultSubobject<UUBPowerInventoryComponent>(TEXT("PowerInventory"));
+	Health = CreateDefaultSubobject<UUBVehicleHealthComponent>(TEXT("Health"));
+	Status = CreateDefaultSubobject<UUBVehicleStatusComponent>(TEXT("Status"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SportsCarMesh(TEXT("/Game/Vehicles/SportsCar/SM_SportsCar.SM_SportsCar"));
 	if (SportsCarMesh.Succeeded())

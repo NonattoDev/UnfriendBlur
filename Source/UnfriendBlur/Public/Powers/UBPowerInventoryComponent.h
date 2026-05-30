@@ -239,6 +239,10 @@ protected:
 	void SpawnPowerFx(EUBPowerType PowerType, const FVector& Location, const FVector& Direction, float LifeSeconds, float VisualScale, bool bAttachToOwner = false, bool bIsSuper = false) const;
 	void ShowPowerMessage(const FString& Message) const;
 	void ApplyPowerHitInternal(EUBPowerType PowerType, AActor* SourceActor, float DeltaVelocity, bool bWeakenedHit);
+	void ApplyPowerGameplayOutcome(EUBPowerType PowerType, AActor* SourceActor, bool bWeakenedHit);
+	float GetDamageForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const;
+	float GetSlowStrengthForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const;
+	float GetSlowDurationForPowerHit(EUBPowerType PowerType, bool bWeakenedHit) const;
 	void RecoverFromHeavyShuntHit();
 	void BeginBoostRamWindow(bool bFireForward, bool bIsSuper);
 	void EndBoostRamWindow();

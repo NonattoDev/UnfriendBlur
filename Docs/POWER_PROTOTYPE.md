@@ -42,7 +42,9 @@ Durante o Play, a tela mostra uma linha de debug com os 3 slots. O slot selecion
 - Os carros-alvo sao apenas bonecos de teste por enquanto: nao dirigem sozinhos, mas recebem impacto fisico e podem ser usados como alvo do Shunt.
 - Shunt agora tem protecoes: 1 Bolt enfraquece, 2 Bolts destroem, mina armada destroi e Barge funciona como pulso/PEM temporario. Shock/raio nao afeta o Shunt.
 - Shield ja participa da regra: quando um alvo com shield ativo recebe hit, o hit e bloqueado.
-- Repair ainda e placeholder porque o projeto ainda nao tem sistema de vida/dano.
+- Repair ja recupera vida real usando `UUBVehicleHealthComponent`; Super Repair tambem limpa slow/status negativo.
+- Bolt, Boost, Shunt, Mine, Barge e Shock ja aplicam dano/slow basico quando acertam um alvo com componentes do prototipo.
+- A linha amarela `Vehicle debug` mostra HP e slow do carro do jogador quando esses componentes existem.
 - O componente de poderes e criado automaticamente em runtime para teste, sem precisar editar o Blueprint do carro agora.
 - O pickup nao mostra mais letras flutuantes. Ele usa orb/luz colorida e, depois que os PNGs forem importados pelo Unreal, mostra o icone do poder como billboard.
 - Ativar poderes agora spawna FX runtime com luz, pulso e sparks orbitando. Impactos de Bolt/Shunt/Mine tambem geram explosao visual.
@@ -92,7 +94,7 @@ Para colocar pickup no mapa:
 
 O proximo passo tecnico e criar:
 
-- UI simples de inventario mostrando os 3 icones.
+- HUD simples de inventario mostrando os 3 icones.
+- Visual de dano/slow no alvo, nao apenas texto debug.
 - Input real com Enhanced Input em vez das hotkeys temporarias.
-- Dois carros no mapa para testar hits.
 - Pickups posicionados na pista.

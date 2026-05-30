@@ -107,16 +107,31 @@ O primeiro corte tecnico adiciona um modulo C++ leve e um sistema de poderes tes
 
 Durante o Play-In-Editor, hotkeys temporarias ativam poderes no carro controlado pelo jogador local:
 
-- `1`: Boost/Nitro.
-- `2`: Shield.
-- `3`: Repair.
-- `4`: Barge.
-- `5`: Bolt.
-- `6`: Shunt.
-- `7`: Mine.
-- `8`: Shock.
+- pickups aleatorios aparecem no mapa;
+- `F` alterna o slot selecionado;
+- `B` usa o poder selecionado para frente;
+- `N` usa o poder selecionado para tras;
+- `G` descarta o poder selecionado no mapa para outro jogador pegar.
 
-Essas hotkeys existem para acelerar validacao. Quando a UI/input final entrar, elas devem virar acoes reais de controle.
+As teclas `1` a `8` nao adicionam poderes. O jogador precisa pegar poderes na pista.
+
+O prototipo ja tem componentes replicaveis de vida e status:
+
+- `UUBVehicleHealthComponent`: vida, dano, reparo e estado destruido.
+- `UUBVehicleStatusComponent`: slow temporario e limpeza de status negativos.
+
+Ainda falta ligar esses dados a um HUD real, audio e balanceamento final.
+
+## Matriz de autoridade inicial
+
+| Sistema | Quem decide | Quem replica | Observacao |
+| --- | --- | --- | --- |
+| Pickup coletado | Servidor | Pickup/inventario | Cliente apenas mostra visual. |
+| Slots de poder | Servidor | Dono do carro, por enquanto todos no prototipo | Futuro: owner-only para inventario completo. |
+| Uso de poder | Servidor | Projeteis/minas/FX/estado | Cliente envia intencao de slot/direcao. |
+| Dano/repair | Servidor | `UUBVehicleHealthComponent` | HUD deve ler componente replicado. |
+| Slow/status | Servidor | `UUBVehicleStatusComponent` | Fisica recebe penalidade instantanea no hit; tuning final vem depois. |
+| Ranking/checkpoints | Servidor | GameState/PlayerState futuros | Necessario para Shock correto e corrida real. |
 
 ## Proximos marcos
 

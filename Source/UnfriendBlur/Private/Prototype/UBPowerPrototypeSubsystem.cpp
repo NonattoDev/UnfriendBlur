@@ -10,6 +10,8 @@
 #include "Powers/UBPowerPickup.h"
 #include "Powers/UBPowerTypes.h"
 #include "Prototype/UBPrototypeTargetCar.h"
+#include "Vehicle/UBVehicleHealthComponent.h"
+#include "Vehicle/UBVehicleStatusComponent.h"
 #include "Stats/Stats.h"
 
 void UUBPowerPrototypeSubsystem::OnWorldBeginPlay(UWorld& InWorld)
@@ -169,6 +171,14 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 	const FVector Velocity = RootPrimitive ? RootPrimitive->GetPhysicsLinearVelocity() : Pawn->GetVelocity();
 	const float SpeedKmh = Velocity.Size() * 0.036f;
 	const float SteerRaw = (bD ? 1.0f : 0.0f) - (bA ? 1.0f : 0.0f);
+	const UUBVehicleHealthComponent* HealthComponent = Pawn->FindComponentByClass<UUBVehicleHealthComponent>();
+	const UUBVehicleStatusComponent* StatusComponent = Pawn->FindComponentByClass<UUBVehicleStatusComponent>();
+	const FString HealthText = HealthComponent
+		? FString::Printf(TEXT("hp %.0f/%.0f"), HealthComponent->GetCurrentHealth(), HealthComponent->MaxHealth)
+		: TEXT("hp ---");
+	const FString StatusText = StatusComponent && StatusComponent->IsSlowed()
+		? FString::Printf(TEXT("slow %.0f%% %.1fs"), StatusComponent->GetSlowStrength() * 100.0f, StatusComponent->GetSlowTimeRemaining())
+		: TEXT("slow off");
 
 	FString MovementComponents;
 	for (const UActorComponent* Component : Pawn->GetComponents())
@@ -195,7 +205,7 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 	}
 
 	const FString InputText = FString::Printf(
-		TEXT("Vehicle debug | %s | W:%d A:%d S:%d D:%d Space:%d Shift:%d | steer raw %.0f | %.0f km/h | yaw %.0f"),
+		TEXT("Vehicle debug | %s | W:%d A:%d S:%d D:%d Space:%d Shift:%d | steer raw %.0f | %.0f km/h | yaw %.0f | %s | %s"),
 		*Pawn->GetClass()->GetName(),
 		bW ? 1 : 0,
 		bA ? 1 : 0,
@@ -205,7 +215,9 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 		bShift ? 1 : 0,
 		SteerRaw,
 		SpeedKmh,
-		Pawn->GetActorRotation().Yaw);
+		Pawn->GetActorRotation().Yaw,
+		*HealthText,
+		*StatusText);
 
 	GEngine->AddOnScreenDebugMessage(9002, 0.05f, FColor::Yellow, InputText);
 

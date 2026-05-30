@@ -178,9 +178,10 @@ Recupera vida/dano do carro.
 
 ### Estado atual
 
-- Ainda e placeholder.
+- Ja usa `UUBVehicleHealthComponent` para recuperar vida real.
+- Super Repair recupera mais vida e limpa slow/status negativo via `UUBVehicleStatusComponent`.
 - Ja tem FX visual de ativacao.
-- Depende de criarmos sistema de vida/dano.
+- Ainda precisa HUD e audio de reparo.
 
 ### Super Repair
 
@@ -262,8 +263,9 @@ Disparo reto, rapido, de precisao.
 - Ja dispara para frente/tras.
 - Ja tem hitbox reduzida no nucleo.
 - Ja aplica impulso.
+- Ja aplica dano e slow curto via componentes de vida/status.
 - Ja tem trail/luz/impact FX.
-- Falta dano e slow real.
+- Ainda precisa HUD/audio e ajuste fino de dano/slow.
 
 ### Super Bolt
 
@@ -384,12 +386,15 @@ mas ainda tem chance real de se defender com habilidade.
 - Ja tem homing simples.
 - Ja respeita frente/tras pela direcao de spawn.
 - Ja aplica impulso forte.
+- Ja aplica dano alto e slow forte no hit cheio.
+- Ja aplica dano/slow reduzidos no hit enfraquecido por Bolt.
 - Ainda nao tem target selection real.
 - Ainda nao sabe quem esta a frente no ranking.
 - Ainda nao filtra carros visiveis por camera.
-- Ainda nao tem vida propria para o projetil.
-- Ainda nao tem defesas por mina, dois Bolts, curva perfeita ou nitro perfeito.
-- Falta dano, slow, perda de traseira e refinamento do comportamento de impacto.
+- Ja tem vida propria simples contra Bolt: 1 Bolt enfraquece, 2 Bolts destroem.
+- Ja pode ser destruido por mina e por Barge/PEM temporario.
+- Ainda falta defesa por curva perfeita e nitro perfeito.
+- Falta refinamento da perda de traseira e comportamento de impacto.
 
 ### Super Shunt
 
@@ -435,7 +440,8 @@ Armadilha deixada na pista.
 - Ja tem delay de armado.
 - Ja ignora o dono inicialmente.
 - Ja tem hitbox reduzida.
-- Falta dano e slow real.
+- Ja aplica dano e slow via componentes de vida/status.
+- Ainda precisa replicar o estado armado para feedback visual mais correto em clientes.
 
 ### Super Mine
 
@@ -492,10 +498,11 @@ O icone deve ser um raio/trovao forte, claramente diferente do Bolt.
 ### Estado atual
 
 - Atualmente Shock ainda e uma explosao radial deslocada para frente/tras.
+- Ja aplica dano e slow forte quando acerta alguem no prototipo radial.
 - Isso deve ser substituido pelo comportamento corrigido acima:
   - mirar primeiro colocado;
   - spawnar 3 raios circulares a frente dele;
-  - aplicar dano e slow forte se acertar.
+  - aplicar dano e slow forte se acertar com telegraph visual.
 
 ### Super Shock
 
@@ -560,10 +567,10 @@ Cada jogador deve ter:
 
 ## Ordem sugerida de implementacao
 
-1. Criar `UUBVehicleHealthComponent`.
-2. Criar `UUBVehicleStatusComponent` para slow/efeitos temporarios.
-3. Aplicar dano/slow nos hits de Bolt, Shunt, Mine, Barge e Shock.
-4. Transformar Repair em cura real.
-5. Criar base de checkpoints/ranking.
-6. Refatorar Shock para mirar o primeiro colocado e disparar 3 raios.
-7. Trocar hotkeys temporarias por Enhanced Input/controle.
+1. Criar HUD real dos 3 slots e estado do carro.
+2. Ajustar controle nativo do Chaos Vehicle antes de reativar qualquer assist.
+3. Refinar dano/slow nos hits de Bolt, Shunt, Mine, Barge, Shock e Boost.
+4. Criar base de checkpoints/ranking.
+5. Refatorar Shock para mirar o primeiro colocado e disparar 3 raios.
+6. Criar target selector do Shunt por jogador local.
+7. Trocar hotkeys temporarias por Enhanced Input/controle final.

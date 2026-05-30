@@ -8,6 +8,8 @@ class UBoxComponent;
 class UPointLightComponent;
 class UStaticMeshComponent;
 class UUBPowerInventoryComponent;
+class UUBVehicleHealthComponent;
+class UUBVehicleStatusComponent;
 
 UCLASS()
 class UNFRIENDBLUR_API AUBPrototypeTargetCar : public APawn
@@ -32,4 +34,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
 	TObjectPtr<UUBPowerInventoryComponent> PowerInventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UUBVehicleHealthComponent> Health;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UUBVehicleStatusComponent> Status;
 };
