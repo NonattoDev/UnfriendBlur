@@ -29,9 +29,11 @@ void UUBPowerPrototypeSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	bSpawnedPrototypePickups = false;
 	bSpawnedPrototypeTargets = false;
 	bLoggedVehicleDiagnostics = false;
+	bConfiguredPrototypeVehicleHandling = false;
 	bHasPrototypeTrackStart = false;
 	PrototypeTrackStartLocation = FVector::ZeroVector;
 	PrototypeTrackStartRotation = FRotator::ZeroRotator;
+	PrototypeRaceWaypoints.Reset();
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 }
@@ -57,6 +59,8 @@ void UUBPowerPrototypeSubsystem::Tick(float DeltaTime)
 		{
 			continue;
 		}
+
+		ConfigurePrototypeVehicleHandling(PlayerController->GetPawn());
 
 		if (!bSpawnedPrototypeTrack && World->GetNetMode() != NM_Client)
 		{
@@ -256,6 +260,26 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 	}
 }
 
+void UUBPowerPrototypeSubsystem::ConfigurePrototypeVehicleHandling(APawn* AnchorPawn)
+{
+	if (!AnchorPawn || bConfiguredPrototypeVehicleHandling)
+	{
+		return;
+	}
+
+	if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(AnchorPawn->GetRootComponent()))
+	{
+		if (RootPrimitive->IsSimulatingPhysics())
+		{
+			RootPrimitive->SetLinearDamping(0.12f);
+			RootPrimitive->SetAngularDamping(0.82f);
+		}
+	}
+
+	bConfiguredPrototypeVehicleHandling = true;
+	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Vehicle] Prototype damping tuned for %s"), *AnchorPawn->GetName());
+}
+
 bool UUBPowerPrototypeSubsystem::IsImportedDriftTrackWorld() const
 {
 	const UWorld* World = GetWorld();
@@ -272,6 +296,7 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 
 	bSpawnedPrototypeTrack = true;
 	bHasPrototypeTrackStart = true;
+	PrototypeRaceWaypoints.Reset();
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 
@@ -294,39 +319,43 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 			continue;
 		}
 
-		if (UBodySetup* BodySetup = Mesh->GetBodySetup())
+		const bool bIsRoadSurface = MeshName.Contains(TEXT("Road"), ESearchCase::IgnoreCase);
+		const bool bIsBoundary = MeshName.Contains(TEXT("Rail"), ESearchCase::IgnoreCase) || MeshName.Contains(TEXT("Fence"), ESearchCase::IgnoreCase);
+		const bool bIsSoftKerb = MeshName.Contains(TEXT("Kerb"), ESearchCase::IgnoreCase);
+
+		if (bIsRoadSurface)
 		{
-			BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+			if (UBodySetup* BodySetup = Mesh->GetBodySetup())
+			{
+				BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+			}
+
+			MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+			++ConfiguredTrackMeshCount;
+		}
+		else if (bIsBoundary)
+		{
+			MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+			++ConfiguredTrackMeshCount;
+		}
+		else if (bIsSoftKerb)
+		{
+			MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+			MeshComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+		}
+		else
+		{
+			MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
 		}
 
-		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 		MeshComponent->RecreatePhysicsState();
-		++ConfiguredTrackMeshCount;
 	}
 
-	const FVector StartLocation = AnchorPawn->GetActorLocation() + FVector::UpVector * 40.0f;
-	const FVector Forward = AnchorPawn->GetActorForwardVector().GetSafeNormal2D();
-	const FVector Right = AnchorPawn->GetActorRightVector().GetSafeNormal2D();
-	PrototypeTrackStartLocation = StartLocation;
-	PrototypeTrackStartRotation = FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f);
-
-	const float LateralPattern[] = { -420.0f, 0.0f, 420.0f, -180.0f, 220.0f };
-	for (int32 Index = 0; Index < 40; ++Index)
-	{
-		const float ForwardDistance = 1600.0f + static_cast<float>(Index) * 420.0f;
-		const float LateralDistance = LateralPattern[Index % UE_ARRAY_COUNT(LateralPattern)];
-		const FVector Candidate = StartLocation + Forward * ForwardDistance + Right * LateralDistance;
-		PrototypePickupLocations.Add(Candidate + FVector::UpVector * 80.0f);
-	}
-
-	for (int32 Index = 0; Index < 5; ++Index)
-	{
-		const float ForwardDistance = 2600.0f + static_cast<float>(Index) * 900.0f;
-		const float LateralDistance = Index % 2 == 0 ? -330.0f : 330.0f;
-		const FVector Candidate = StartLocation + Forward * ForwardDistance + Right * LateralDistance + FVector::UpVector * 90.0f;
-		PrototypeTargetTransforms.Add(FTransform(PrototypeTrackStartRotation, Candidate, FVector::OneVector));
-	}
+	BuildImportedDriftTrackGameplayRoute(AnchorPawn);
 
 	MovePawnToPrototypeTrackStart(AnchorPawn);
 
@@ -335,6 +364,199 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 9.0f, FColor::Cyan, TEXT("DRIFT TRACK SHORT loaded with power pickups and target cars"));
+	}
+}
+
+void UUBPowerPrototypeSubsystem::BuildImportedDriftTrackGameplayRoute(APawn* AnchorPawn)
+{
+	PrototypeRaceWaypoints.Reset();
+	PrototypePickupLocations.Reset();
+	PrototypeTargetTransforms.Reset();
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	TMap<int32, FVector> RoadCentersByIndex;
+	for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+	{
+		const AStaticMeshActor* MeshActor = *It;
+		const UStaticMeshComponent* MeshComponent = MeshActor ? MeshActor->GetStaticMeshComponent() : nullptr;
+		const UStaticMesh* Mesh = MeshComponent ? MeshComponent->GetStaticMesh() : nullptr;
+		if (!Mesh)
+		{
+			continue;
+		}
+
+		const FString MeshName = Mesh->GetName();
+		if (!MeshName.Contains(TEXT("Road_Part"), ESearchCase::IgnoreCase))
+		{
+			continue;
+		}
+
+		int32 LastUnderscoreIndex = INDEX_NONE;
+		if (!MeshName.FindLastChar(TEXT('_'), LastUnderscoreIndex))
+		{
+			continue;
+		}
+
+		const int32 RoadPartIndex = FCString::Atoi(*MeshName.Mid(LastUnderscoreIndex + 1));
+		RoadCentersByIndex.Add(RoadPartIndex, MeshComponent->Bounds.Origin);
+	}
+
+	TArray<int32> RoadPartIndexes;
+	RoadCentersByIndex.GetKeys(RoadPartIndexes);
+	RoadPartIndexes.Sort();
+
+	for (int32 RoadPartIndex : RoadPartIndexes)
+	{
+		const FVector* RoadCenter = RoadCentersByIndex.Find(RoadPartIndex);
+		if (RoadCenter)
+		{
+			PrototypeRaceWaypoints.Add(ProjectPointToTrackSurface(*RoadCenter, AnchorPawn, 92.0f));
+		}
+	}
+
+	if (PrototypeRaceWaypoints.Num() < 4)
+	{
+		static const FVector FallbackRouteSeeds[] =
+		{
+			FVector(-2000.0f, 1450.0f, 0.0f),
+			FVector(11775.0f, 4906.0f, 0.0f),
+			FVector(25506.0f, 1774.0f, 0.0f),
+			FVector(20101.0f, -5614.0f, 0.0f),
+			FVector(6990.0f, -7736.0f, 0.0f),
+			FVector(-6506.0f, -10714.0f, 0.0f),
+			FVector(-16429.0f, -15740.0f, 0.0f),
+			FVector(-10867.0f, -4709.0f, 0.0f)
+		};
+
+		PrototypeRaceWaypoints.Reset();
+		for (const FVector& RouteSeed : FallbackRouteSeeds)
+		{
+			PrototypeRaceWaypoints.Add(ProjectPointToTrackSurface(RouteSeed, AnchorPawn, 92.0f));
+		}
+	}
+
+	if (PrototypeRaceWaypoints.Num() < 2)
+	{
+		const FVector StartLocation = AnchorPawn ? AnchorPawn->GetActorLocation() : FVector::ZeroVector;
+		const FRotator StartRotation = AnchorPawn ? AnchorPawn->GetActorRotation() : FRotator::ZeroRotator;
+		PrototypeTrackStartLocation = StartLocation;
+		PrototypeTrackStartRotation = FRotator(0.0f, StartRotation.Yaw, 0.0f);
+		return;
+	}
+
+	const FVector StartGroundPoint = FVector(PrototypeRaceWaypoints[0].X, PrototypeRaceWaypoints[0].Y, PrototypeRaceWaypoints[0].Z);
+	const FVector NextGroundPoint = PrototypeRaceWaypoints[1];
+	const FVector StartDirection = (NextGroundPoint - StartGroundPoint).GetSafeNormal2D();
+	PrototypeTrackStartLocation = ProjectPointToTrackSurface(StartGroundPoint - StartDirection * 240.0f, AnchorPawn, 155.0f);
+	PrototypeTrackStartRotation = StartDirection.Rotation();
+
+	for (int32 Index = 0; Index < PrototypeRaceWaypoints.Num(); ++Index)
+	{
+		const FVector SegmentStart = PrototypeRaceWaypoints[Index];
+		const FVector SegmentEnd = PrototypeRaceWaypoints[(Index + 1) % PrototypeRaceWaypoints.Num()];
+		AddImportedTrackGameplayPoints(SegmentStart, SegmentEnd, Index);
+	}
+
+	float RouteLength = 0.0f;
+	for (int32 Index = 0; Index < PrototypeRaceWaypoints.Num(); ++Index)
+	{
+		RouteLength += FVector::Dist2D(PrototypeRaceWaypoints[Index], PrototypeRaceWaypoints[(Index + 1) % PrototypeRaceWaypoints.Num()]);
+	}
+
+	const auto SampleRouteAtDistance = [this, RouteLength](float Distance, FVector& OutLocation, FVector& OutDirection) -> bool
+	{
+		if (PrototypeRaceWaypoints.Num() < 2 || RouteLength <= KINDA_SMALL_NUMBER)
+		{
+			return false;
+		}
+
+		float RemainingDistance = FMath::Fmod(FMath::Max(0.0f, Distance), RouteLength);
+		for (int32 Index = 0; Index < PrototypeRaceWaypoints.Num(); ++Index)
+		{
+			const FVector SegmentStart = PrototypeRaceWaypoints[Index];
+			const FVector SegmentEnd = PrototypeRaceWaypoints[(Index + 1) % PrototypeRaceWaypoints.Num()];
+			const FVector Segment = SegmentEnd - SegmentStart;
+			const float SegmentLength = Segment.Size2D();
+			if (SegmentLength <= KINDA_SMALL_NUMBER)
+			{
+				continue;
+			}
+
+			if (RemainingDistance <= SegmentLength)
+			{
+				OutLocation = FMath::Lerp(SegmentStart, SegmentEnd, RemainingDistance / SegmentLength);
+				OutDirection = Segment.GetSafeNormal2D();
+				return true;
+			}
+
+			RemainingDistance -= SegmentLength;
+		}
+
+		OutLocation = PrototypeRaceWaypoints[0];
+		OutDirection = (PrototypeRaceWaypoints[1] - PrototypeRaceWaypoints[0]).GetSafeNormal2D();
+		return true;
+	};
+
+	const float TargetDistances[] = { 1900.0f, 3400.0f, 5200.0f, 7400.0f, 9700.0f, 12300.0f };
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(TargetDistances); ++Index)
+	{
+		FVector RouteLocation = FVector::ZeroVector;
+		FVector Direction = FVector::ForwardVector;
+		if (!SampleRouteAtDistance(TargetDistances[Index], RouteLocation, Direction))
+		{
+			continue;
+		}
+
+		const FVector Right = FVector::CrossProduct(FVector::UpVector, Direction).GetSafeNormal();
+		const float LaneOffset = Index % 2 == 0 ? -230.0f : 230.0f;
+		const FVector TargetLocation = ProjectPointToTrackSurface(RouteLocation + Right * LaneOffset, AnchorPawn, 88.0f);
+		PrototypeTargetTransforms.Add(FTransform(Direction.Rotation(), TargetLocation, FVector::OneVector));
+	}
+}
+
+FVector UUBPowerPrototypeSubsystem::ProjectPointToTrackSurface(const FVector& Candidate, const AActor* IgnoredActor, float Clearance) const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return Candidate + FVector::UpVector * Clearance;
+	}
+
+	FHitResult Hit;
+	const FVector TraceStart(Candidate.X, Candidate.Y, Candidate.Z + 6000.0f);
+	const FVector TraceEnd(Candidate.X, Candidate.Y, Candidate.Z - 12000.0f);
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBImportedTrackSurfaceTrace), false, IgnoredActor);
+	if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
+	{
+		return Hit.Location + FVector::UpVector * Clearance;
+	}
+
+	return Candidate + FVector::UpVector * Clearance;
+}
+
+void UUBPowerPrototypeSubsystem::AddImportedTrackGameplayPoints(const FVector& SegmentStart, const FVector& SegmentEnd, int32 SegmentIndex)
+{
+	const FVector Segment = SegmentEnd - SegmentStart;
+	const FVector Direction = Segment.GetSafeNormal2D();
+	if (Direction.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector Right = FVector::CrossProduct(FVector::UpVector, Direction).GetSafeNormal();
+	const float LateralPattern[] = { -285.0f, 0.0f, 285.0f, -145.0f, 145.0f };
+	const float AlphaPattern[] = { 0.10f, 0.28f, 0.46f, 0.64f, 0.82f };
+	for (int32 PickupIndex = 0; PickupIndex < UE_ARRAY_COUNT(AlphaPattern); ++PickupIndex)
+	{
+		const float Alpha = AlphaPattern[PickupIndex];
+		const float Lateral = LateralPattern[(PickupIndex + SegmentIndex) % UE_ARRAY_COUNT(LateralPattern)];
+		const FVector Candidate = FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + Right * Lateral;
+		PrototypePickupLocations.Add(ProjectPointToTrackSurface(Candidate, nullptr, 58.0f));
 	}
 }
 
@@ -348,6 +570,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 
 	bSpawnedPrototypeTrack = true;
 	bHasPrototypeTrackStart = false;
+	PrototypeRaceWaypoints.Reset();
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 
@@ -382,6 +605,11 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 		FVector2D(19500.0f, 1500.0f),
 		FVector2D(22400.0f, 1500.0f)
 	};
+
+	for (const FVector2D& LocalPoint : LocalPath)
+	{
+		PrototypeRaceWaypoints.Add(TransformTrackPoint(AnchorPawn, LocalPoint, RoadTopZ) + FVector::UpVector * 88.0f);
+	}
 
 	constexpr float RoadWidth = 1420.0f;
 	constexpr float RoadThickness = 34.0f;
@@ -545,13 +773,13 @@ void UUBPowerPrototypeSubsystem::AddTrackGameplayPoints(const FVector& SegmentSt
 	{
 		const float Alpha = 0.18f + static_cast<float>(PickupIndex) * 0.2f;
 		const float Lateral = LateralPattern[(PickupIndex + SegmentIndex) % UE_ARRAY_COUNT(LateralPattern)];
-		PrototypePickupLocations.Add(FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + Right * Lateral + FVector::UpVector * 118.0f);
+		PrototypePickupLocations.Add(FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + Right * Lateral + FVector::UpVector * 62.0f);
 	}
 
 	if (SegmentIndex >= 1 && SegmentIndex % 2 == 1)
 	{
 		const float Lateral = SegmentIndex % 4 == 1 ? -280.0f : 310.0f;
-		const FVector TargetLocation = FMath::Lerp(SegmentStart, SegmentEnd, 0.58f) + Right * Lateral + FVector::UpVector * 88.0f;
+		const FVector TargetLocation = FMath::Lerp(SegmentStart, SegmentEnd, 0.58f) + Right * Lateral + FVector::UpVector * 84.0f;
 		PrototypeTargetTransforms.Add(FTransform(TargetRotation, TargetLocation, FVector::OneVector));
 	}
 }
@@ -654,10 +882,10 @@ FVector UUBPowerPrototypeSubsystem::FindPickupLocation(APawn* AnchorPawn, int32 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBPrototypePickupGroundTrace), false, AnchorPawn);
 	if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 	{
-		return Hit.Location + FVector::UpVector * 120.0f;
+		return Hit.Location + FVector::UpVector * 62.0f;
 	}
 
-	return Candidate + FVector::UpVector * 120.0f;
+	return Candidate + FVector::UpVector * 62.0f;
 }
 
 void UUBPowerPrototypeSubsystem::SpawnPrototypeTargets(APawn* AnchorPawn)
@@ -681,7 +909,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTargets(APawn* AnchorPawn)
 		AUBPrototypeTargetCar* TargetCar = World->SpawnActor<AUBPrototypeTargetCar>(AUBPrototypeTargetCar::StaticClass(), SpawnTransform, SpawnParams);
 		if (TargetCar)
 		{
-			TargetCar->InitializePrototypeTarget(Index);
+			TargetCar->InitializePrototypeTarget(Index, PrototypeRaceWaypoints);
 		}
 	}
 
@@ -718,10 +946,10 @@ FTransform UUBPowerPrototypeSubsystem::FindTargetCarTransform(APawn* AnchorPawn,
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBPrototypeTargetGroundTrace), false, AnchorPawn);
 	if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 	{
-		return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Hit.Location + FVector::UpVector * 85.0f, FVector::OneVector);
+		return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Hit.Location + FVector::UpVector * 84.0f, FVector::OneVector);
 	}
 
-	return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Candidate + FVector::UpVector * 85.0f, FVector::OneVector);
+	return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Candidate + FVector::UpVector * 84.0f, FVector::OneVector);
 }
 
 EUBPowerType UUBPowerPrototypeSubsystem::PickRandomPower() const

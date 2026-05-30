@@ -72,8 +72,8 @@ void AUBPowerFxActor::Tick(float DeltaSeconds)
 
 	if (PointLight)
 	{
-		PointLight->SetIntensity(FMath::Lerp(bIsSuper ? 5200.0f : 2600.0f, 0.0f, Alpha) * FMath::Max(0.15f, Pulse));
-		PointLight->SetAttenuationRadius((bIsSuper ? 620.0f : 420.0f) * VisualScale * (1.0f + Alpha * 0.5f));
+		PointLight->SetIntensity(FMath::Lerp(bIsSuper ? 4200.0f : 2200.0f, 0.0f, Alpha) * FMath::Max(0.15f, Pulse));
+		PointLight->SetAttenuationRadius((bIsSuper ? 500.0f : 340.0f) * VisualScale * (1.0f + Alpha * 0.42f));
 	}
 }
 
@@ -126,15 +126,15 @@ void AUBPowerFxActor::ApplyVisualState()
 	if (PointLight)
 	{
 		PointLight->SetLightColor(PowerColor);
-		PointLight->SetIntensity(bIsSuper ? 5200.0f : 2600.0f);
-		PointLight->SetAttenuationRadius((bIsSuper ? 650.0f : 440.0f) * VisualScale);
+		PointLight->SetIntensity(bIsSuper ? 4200.0f : 2200.0f);
+		PointLight->SetAttenuationRadius((bIsSuper ? 520.0f : 350.0f) * VisualScale);
 	}
 }
 
 void AUBPowerFxActor::UpdateOrbitMeshes(float Alpha)
 {
 	const float SuperScale = bIsSuper ? 1.25f : 1.0f;
-	const float BaseRadius = FMath::Lerp(70.0f, 210.0f, Alpha) * VisualScale * SuperScale;
+	const float BaseRadius = FMath::Lerp(48.0f, 145.0f, Alpha) * VisualScale * SuperScale;
 	const float SparkScale = FMath::Lerp(bIsSuper ? 0.075f : 0.055f, bIsSuper ? 0.026f : 0.018f, Alpha) * VisualScale;
 
 	for (int32 Index = 0; Index < OrbitMeshes.Num(); ++Index)
@@ -147,7 +147,7 @@ void AUBPowerFxActor::UpdateOrbitMeshes(float Alpha)
 
 		const float Phase = static_cast<float>(Index) / static_cast<float>(OrbitMeshes.Num());
 		const float Angle = AgeSeconds * (2.4f + Phase * 1.9f) + Phase * UE_TWO_PI;
-		const float Height = FMath::Sin(Angle * 1.7f) * 62.0f * VisualScale;
+		const float Height = FMath::Sin(Angle * 1.7f) * 38.0f * VisualScale;
 		const float Radius = BaseRadius * (0.72f + 0.28f * FMath::Sin(Angle * 0.63f));
 		const FVector LocalLocation(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, Height);
 

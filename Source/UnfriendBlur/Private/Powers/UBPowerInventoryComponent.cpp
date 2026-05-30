@@ -312,7 +312,7 @@ bool UUBPowerInventoryComponent::TryBlockIncomingPower(AActor* SourceActor, EUBP
 	ShowPowerMessage(FString::Printf(TEXT("Shield blocked %s"), *UBPowerTypeToString(PowerType)));
 	if (AActor* OwnerActor = GetOwner())
 	{
-		SpawnPowerFx(EUBPowerType::Shield, OwnerActor->GetActorLocation() + FVector::UpVector * 90.0f, OwnerActor->GetActorForwardVector(), 0.5f, 0.9f, false, bSuperShieldReflectReady);
+		SpawnPowerFx(EUBPowerType::Shield, OwnerActor->GetActorLocation() + FVector::UpVector * 56.0f, OwnerActor->GetActorForwardVector(), 0.5f, 0.72f, false, bSuperShieldReflectReady);
 
 		if (bSuperShieldReflectReady && SourceActor)
 		{
@@ -927,7 +927,7 @@ void UUBPowerInventoryComponent::ActivateShield(bool bIsSuper)
 
 	if (const AActor* OwnerActor = GetOwner())
 	{
-		SpawnPowerFx(EUBPowerType::Shield, OwnerActor->GetActorLocation() + FVector::UpVector * 75.0f, OwnerActor->GetActorForwardVector(), ShieldDuration * (bIsSuper ? 1.35f : 1.0f), bIsSuper ? 1.45f : 1.05f, true, bIsSuper);
+		SpawnPowerFx(EUBPowerType::Shield, OwnerActor->GetActorLocation() + FVector::UpVector * 52.0f, OwnerActor->GetActorForwardVector(), ShieldDuration * (bIsSuper ? 1.35f : 1.0f), bIsSuper ? 1.18f : 0.88f, true, bIsSuper);
 	}
 }
 
@@ -953,7 +953,7 @@ void UUBPowerInventoryComponent::ActivateRepair(bool bIsSuper)
 
 	if (const AActor* FxOwnerActor = GetOwner())
 	{
-		SpawnPowerFx(EUBPowerType::Repair, FxOwnerActor->GetActorLocation() + FVector::UpVector * 100.0f, FxOwnerActor->GetActorForwardVector(), bIsSuper ? 1.35f : 0.9f, bIsSuper ? 1.35f : 0.85f, false, bIsSuper);
+		SpawnPowerFx(EUBPowerType::Repair, FxOwnerActor->GetActorLocation() + FVector::UpVector * 58.0f, FxOwnerActor->GetActorForwardVector(), bIsSuper ? 1.35f : 0.9f, bIsSuper ? 1.05f : 0.68f, false, bIsSuper);
 	}
 }
 
@@ -965,7 +965,7 @@ void UUBPowerInventoryComponent::ActivateBarge(bool bFireForward, bool bIsSuper)
 	{
 		const FVector Origin = OwnerActor->GetActorLocation() + (bFireForward ? OwnerActor->GetActorForwardVector() : -OwnerActor->GetActorForwardVector()) * 260.0f;
 		const FVector Direction = bFireForward ? OwnerActor->GetActorForwardVector() : -OwnerActor->GetActorForwardVector();
-		SpawnPowerFx(EUBPowerType::Barge, Origin + FVector::UpVector * 70.0f, Direction, bIsSuper ? 1.0f : 0.6f, bIsSuper ? 1.7f : 1.05f, false, bIsSuper);
+		SpawnPowerFx(EUBPowerType::Barge, Origin + FVector::UpVector * 44.0f, Direction, bIsSuper ? 1.0f : 0.6f, bIsSuper ? 1.25f : 0.82f, false, bIsSuper);
 	}
 }
 
@@ -1036,11 +1036,11 @@ void UUBPowerInventoryComponent::ActivateShock(bool bFireForward, bool bIsSuper)
 	{
 		const FVector Origin = OwnerActor->GetActorLocation() + (bFireForward ? OwnerActor->GetActorForwardVector() : -OwnerActor->GetActorForwardVector()) * 420.0f;
 		const FVector Direction = bFireForward ? OwnerActor->GetActorForwardVector() : -OwnerActor->GetActorForwardVector();
-		SpawnPowerFx(EUBPowerType::Shock, Origin + FVector::UpVector * 110.0f, Direction, bIsSuper ? 1.35f : 0.95f, bIsSuper ? 2.2f : 1.55f, false, bIsSuper);
+		SpawnPowerFx(EUBPowerType::Shock, Origin + FVector::UpVector * 68.0f, Direction, bIsSuper ? 1.35f : 0.95f, bIsSuper ? 1.48f : 1.05f, false, bIsSuper);
 		if (bIsSuper)
 		{
-			SpawnPowerFx(EUBPowerType::Shock, Origin + Direction * 500.0f + FVector::UpVector * 120.0f, Direction, 1.2f, 1.6f, false, true);
-			SpawnPowerFx(EUBPowerType::Shock, Origin + Direction * 1000.0f + FVector::UpVector * 120.0f, Direction, 1.1f, 1.4f, false, true);
+			SpawnPowerFx(EUBPowerType::Shock, Origin + Direction * 500.0f + FVector::UpVector * 72.0f, Direction, 1.2f, 1.15f, false, true);
+			SpawnPowerFx(EUBPowerType::Shock, Origin + Direction * 1000.0f + FVector::UpVector * 72.0f, Direction, 1.1f, 1.0f, false, true);
 		}
 	}
 }
@@ -1216,7 +1216,14 @@ void UUBPowerInventoryComponent::SpawnDroppedPowerPickup(const FUBPowerSlot& Pow
 
 	const FVector Backward = -OwnerActor->GetActorForwardVector().GetSafeNormal();
 	const FVector Right = OwnerActor->GetActorRightVector().GetSafeNormal();
-	const FVector SpawnLocation = OwnerActor->GetActorLocation() + Backward * 360.0f + Right * 120.0f + FVector::UpVector * 120.0f;
+	const FVector CandidateLocation = OwnerActor->GetActorLocation() + Backward * 360.0f + Right * 120.0f;
+	FVector SpawnLocation = CandidateLocation + FVector::UpVector * 58.0f;
+	FHitResult GroundHit;
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBDroppedPowerGroundTrace), false, OwnerActor);
+	if (World->LineTraceSingleByChannel(GroundHit, CandidateLocation + FVector::UpVector * 700.0f, CandidateLocation - FVector::UpVector * 2200.0f, ECC_Visibility, QueryParams))
+	{
+		SpawnLocation = GroundHit.Location + FVector::UpVector * 58.0f;
+	}
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
 	FActorSpawnParameters SpawnParams;

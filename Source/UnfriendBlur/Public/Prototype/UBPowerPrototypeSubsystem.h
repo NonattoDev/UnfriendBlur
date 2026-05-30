@@ -30,17 +30,23 @@ private:
 	bool bSpawnedPrototypePickups = false;
 	bool bSpawnedPrototypeTargets = false;
 	bool bLoggedVehicleDiagnostics = false;
+	bool bConfiguredPrototypeVehicleHandling = false;
 	bool bHasPrototypeTrackStart = false;
 	FVector PrototypeTrackStartLocation = FVector::ZeroVector;
 	FRotator PrototypeTrackStartRotation = FRotator::ZeroRotator;
+	TArray<FVector> PrototypeRaceWaypoints;
 	TArray<FVector> PrototypePickupLocations;
 	TArray<FTransform> PrototypeTargetTransforms;
 
 	void TryInventoryHotkeys(APlayerController* PlayerController) const;
 	void DisplayInventory(APlayerController* PlayerController) const;
 	void DisplayVehicleDiagnostics(APlayerController* PlayerController);
+	void ConfigurePrototypeVehicleHandling(APawn* AnchorPawn);
 	bool IsImportedDriftTrackWorld() const;
 	void SetupImportedDriftTrack(APawn* AnchorPawn);
+	void BuildImportedDriftTrackGameplayRoute(APawn* AnchorPawn);
+	FVector ProjectPointToTrackSurface(const FVector& Candidate, const AActor* IgnoredActor, float Clearance) const;
+	void AddImportedTrackGameplayPoints(const FVector& SegmentStart, const FVector& SegmentEnd, int32 SegmentIndex);
 	void SpawnPrototypeTrack(APawn* AnchorPawn);
 	AStaticMeshActor* SpawnTrackBlock(UStaticMesh* Mesh, UMaterialInterface* BaseMaterial, const FVector& Location, const FRotator& Rotation, const FVector& Scale, const FLinearColor& Color, bool bCollisionEnabled, const FString& ActorLabel) const;
 	void ApplyTrackMaterial(UStaticMeshComponent* MeshComponent, UMaterialInterface* BaseMaterial, const FLinearColor& Color, float EmissiveStrength) const;

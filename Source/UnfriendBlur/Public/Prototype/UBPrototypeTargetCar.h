@@ -19,8 +19,13 @@ class UNFRIENDBLUR_API AUBPrototypeTargetCar : public APawn
 public:
 	AUBPrototypeTargetCar();
 
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
+
 	UFUNCTION(BlueprintCallable, Category = "UnfriendBlur|Prototype")
 	void InitializePrototypeTarget(int32 InTargetIndex);
+
+	void InitializePrototypeTarget(int32 InTargetIndex, const TArray<FVector>& InDrivingWaypoints);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
@@ -40,4 +45,33 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
 	TObjectPtr<UUBVehicleStatusComponent> Status;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float DesiredCruiseSpeed = 2150.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float WaypointAcceptanceRadius = 620.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float AccelerationResponse = 2.8f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float TurnResponse = 4.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float StuckRecoverySeconds = 1.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Prototype|Driving")
+	float ImpactRecoveryHoldSeconds = 1.25f;
+
+	UPROPERTY(Transient)
+	TArray<FVector> DrivingWaypoints;
+
+	int32 TargetIndex = 0;
+	int32 CurrentWaypointIndex = 0;
+	float LowSpeedSeconds = 0.0f;
+	float ImpactRecoveryTimeRemaining = 0.0f;
+
+	int32 FindClosestWaypointIndex() const;
+	void AdvanceWaypointIfNeeded();
 };

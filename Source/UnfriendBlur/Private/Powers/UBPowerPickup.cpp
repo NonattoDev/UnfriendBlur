@@ -20,7 +20,7 @@ AUBPowerPickup::AUBPowerPickup()
 
 	Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	SetRootComponent(Collision);
-	Collision->InitSphereRadius(105.0f);
+	Collision->InitSphereRadius(88.0f);
 	Collision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Collision->SetCollisionObjectType(ECC_WorldDynamic);
 	Collision->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -30,20 +30,20 @@ AUBPowerPickup::AUBPowerPickup()
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Collision);
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	Mesh->SetRelativeLocation(FVector(0.0f, 0.0f, 42.0f));
+	Mesh->SetRelativeLocation(FVector(0.0f, 0.0f, 28.0f));
 	Mesh->SetRelativeRotation(FRotator(45.0f, 45.0f, 0.0f));
-	Mesh->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.42f));
+	Mesh->SetRelativeScale3D(FVector(0.13f, 0.13f, 0.32f));
 
 	IconBillboard = CreateDefaultSubobject<UBillboardComponent>(TEXT("IconBillboard"));
 	IconBillboard->SetupAttachment(Collision);
-	IconBillboard->SetRelativeLocation(FVector(0.0f, 0.0f, 122.0f));
-	IconBillboard->SetRelativeScale3D(FVector(0.22f));
+	IconBillboard->SetRelativeLocation(FVector(0.0f, 0.0f, 86.0f));
+	IconBillboard->SetRelativeScale3D(FVector(0.16f));
 	IconBillboard->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	PointLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("PointLight"));
 	PointLight->SetupAttachment(Collision);
-	PointLight->SetIntensity(900.0f);
-	PointLight->SetAttenuationRadius(360.0f);
+	PointLight->SetIntensity(760.0f);
+	PointLight->SetAttenuationRadius(275.0f);
 	PointLight->bUseInverseSquaredFalloff = false;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -87,17 +87,17 @@ void AUBPowerPickup::Tick(float DeltaSeconds)
 	{
 		const float Pulse = 1.0f + FMath::Sin(GetWorld()->GetTimeSeconds() * 5.0f) * 0.08f;
 		Mesh->AddLocalRotation(FRotator(0.0f, 90.0f * DeltaSeconds, 0.0f));
-		Mesh->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.42f) * Pulse);
+		Mesh->SetRelativeScale3D(FVector(0.13f, 0.13f, 0.32f) * Pulse);
 
 		if (IconBillboard)
 		{
 			IconBillboard->SetWorldRotation(FRotator(0.0f, 180.0f, 0.0f));
-			IconBillboard->SetRelativeScale3D(FVector(0.22f + Pulse * 0.015f));
+			IconBillboard->SetRelativeScale3D(FVector(0.16f + Pulse * 0.01f));
 		}
 
 		if (PointLight)
 		{
-			PointLight->SetIntensity(900.0f * Pulse);
+			PointLight->SetIntensity(760.0f * Pulse);
 		}
 	}
 }
@@ -196,7 +196,7 @@ void AUBPowerPickup::RefreshVisuals()
 	if (PointLight)
 	{
 		PointLight->SetLightColor(PowerColor);
-		PointLight->SetIntensity(bIsSuperPickup ? 1450.0f : 900.0f);
+		PointLight->SetIntensity(bIsSuperPickup ? 1180.0f : 760.0f);
 	}
 }
 

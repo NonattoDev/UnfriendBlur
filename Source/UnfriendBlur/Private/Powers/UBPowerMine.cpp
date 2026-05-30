@@ -161,7 +161,7 @@ void AUBPowerMine::SpawnExplosionFx()
 	SpawnParams.Owner = SourceActor ? SourceActor : this;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	AUBPowerFxActor* FxActor = World->SpawnActor<AUBPowerFxActor>(AUBPowerFxActor::StaticClass(), GetActorLocation() + FVector::UpVector * 80.0f, GetActorRotation(), SpawnParams);
+	AUBPowerFxActor* FxActor = World->SpawnActor<AUBPowerFxActor>(AUBPowerFxActor::StaticClass(), GetActorLocation() + FVector::UpVector * 46.0f, GetActorRotation(), SpawnParams);
 	if (FxActor)
 	{
 		FxActor->InitializePowerFx(EUBPowerType::Mine, FVector::UpVector, 0.7f, 1.0f);
