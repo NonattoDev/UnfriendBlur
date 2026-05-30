@@ -27,6 +27,9 @@ void UUBPowerPrototypeSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	bSpawnedPrototypePickups = false;
 	bSpawnedPrototypeTargets = false;
 	bLoggedVehicleDiagnostics = false;
+	bHasPrototypeTrackStart = false;
+	PrototypeTrackStartLocation = FVector::ZeroVector;
+	PrototypeTrackStartRotation = FRotator::ZeroRotator;
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 }
@@ -253,6 +256,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 	}
 
 	bSpawnedPrototypeTrack = true;
+	bHasPrototypeTrackStart = false;
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 
@@ -270,7 +274,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 	const FVector TraceEnd = AnchorLocation - FVector::UpVector * 5000.0f;
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBPrototypeTrackGroundTrace), false, AnchorPawn);
 	const float RoadTopZ = World->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, ECC_Visibility, QueryParams)
-		? GroundHit.Location.Z + 8.0f
+		? GroundHit.Location.Z + 70.0f
 		: AnchorLocation.Z - 70.0f;
 
 	const TArray<FVector2D> LocalPath =
@@ -289,10 +293,10 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 	};
 
 	constexpr float RoadWidth = 1420.0f;
-	constexpr float RoadThickness = 10.0f;
-	const FLinearColor AsphaltColor(0.018f, 0.019f, 0.021f, 1.0f);
-	const FLinearColor ShoulderColor(0.035f, 0.038f, 0.042f, 1.0f);
-	const FLinearColor RailColor(0.09f, 0.095f, 0.105f, 1.0f);
+	constexpr float RoadThickness = 34.0f;
+	const FLinearColor AsphaltColor(0.055f, 0.058f, 0.064f, 1.0f);
+	const FLinearColor ShoulderColor(0.085f, 0.09f, 0.1f, 1.0f);
+	const FLinearColor RailColor(0.16f, 0.17f, 0.19f, 1.0f);
 	const FLinearColor LeftNeonColor(0.0f, 0.55f, 1.0f, 1.0f);
 	const FLinearColor RightNeonColor(1.0f, 0.12f, 0.02f, 1.0f);
 	const FLinearColor CenterLineColor(1.0f, 0.78f, 0.12f, 1.0f);
@@ -316,16 +320,16 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 		const FVector RoadCenter = FVector(Midpoint.X, Midpoint.Y, RoadTopZ - RoadThickness * 0.5f);
 
 		SpawnTrackBlock(CubeMesh, BaseMaterial, RoadCenter, Rotation, FVector(SegmentLength / 100.0f, RoadWidth / 100.0f, RoadThickness / 100.0f), AsphaltColor, true, TEXT("UB_Road"));
-		SpawnTrackBlock(CubeMesh, BaseMaterial, RoadCenter + Right * (RoadWidth * 0.5f + 135.0f), Rotation, FVector(SegmentLength / 100.0f, 2.35f, RoadThickness / 100.0f), ShoulderColor, true, TEXT("UB_Shoulder_R"));
-		SpawnTrackBlock(CubeMesh, BaseMaterial, RoadCenter - Right * (RoadWidth * 0.5f + 135.0f), Rotation, FVector(SegmentLength / 100.0f, 2.35f, RoadThickness / 100.0f), ShoulderColor, true, TEXT("UB_Shoulder_L"));
+		SpawnTrackBlock(CubeMesh, BaseMaterial, RoadCenter + Right * (RoadWidth * 0.5f + 150.0f), Rotation, FVector(SegmentLength / 100.0f, 2.7f, RoadThickness / 100.0f), ShoulderColor, true, TEXT("UB_Shoulder_R"));
+		SpawnTrackBlock(CubeMesh, BaseMaterial, RoadCenter - Right * (RoadWidth * 0.5f + 150.0f), Rotation, FVector(SegmentLength / 100.0f, 2.7f, RoadThickness / 100.0f), ShoulderColor, true, TEXT("UB_Shoulder_L"));
 
-		const FVector RailScale(SegmentLength / 100.0f, 0.18f, 0.78f);
-		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 38.0f) + Right * (RoadWidth * 0.5f + 285.0f), Rotation, RailScale, RailColor, true, TEXT("UB_Rail_R"));
-		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 38.0f) - Right * (RoadWidth * 0.5f + 285.0f), Rotation, RailScale, RailColor, true, TEXT("UB_Rail_L"));
+		const FVector RailScale(SegmentLength / 100.0f, 0.28f, 1.15f);
+		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 58.0f) + Right * (RoadWidth * 0.5f + 315.0f), Rotation, RailScale, RailColor, true, TEXT("UB_Rail_R"));
+		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 58.0f) - Right * (RoadWidth * 0.5f + 315.0f), Rotation, RailScale, RailColor, true, TEXT("UB_Rail_L"));
 
-		const FVector NeonScale(SegmentLength / 100.0f, 0.035f, 0.045f);
-		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 8.0f) + Right * (RoadWidth * 0.5f - 44.0f), Rotation, NeonScale, RightNeonColor, false, TEXT("UB_Neon_R"));
-		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 8.0f) - Right * (RoadWidth * 0.5f - 44.0f), Rotation, NeonScale, LeftNeonColor, false, TEXT("UB_Neon_L"));
+		const FVector NeonScale(SegmentLength / 100.0f, 0.055f, 0.075f);
+		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 18.0f) + Right * (RoadWidth * 0.5f - 54.0f), Rotation, NeonScale, RightNeonColor, false, TEXT("UB_Neon_R"));
+		SpawnTrackBlock(CubeMesh, BaseMaterial, FVector(Midpoint.X, Midpoint.Y, RoadTopZ + 18.0f) - Right * (RoadWidth * 0.5f - 54.0f), Rotation, NeonScale, LeftNeonColor, false, TEXT("UB_Neon_L"));
 
 		const int32 DashCount = FMath::Max(1, FMath::FloorToInt(SegmentLength / 650.0f));
 		for (int32 DashIndex = 0; DashIndex < DashCount; ++DashIndex)
@@ -336,8 +340,8 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 			}
 
 			const float Alpha = (static_cast<float>(DashIndex) + 0.5f) / static_cast<float>(DashCount);
-			const FVector DashLocation = FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + FVector::UpVector * 10.0f;
-			SpawnTrackBlock(CubeMesh, BaseMaterial, DashLocation, Rotation, FVector(2.55f, 0.055f, 0.035f), CenterLineColor, false, TEXT("UB_CenterDash"));
+			const FVector DashLocation = FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + FVector::UpVector * 24.0f;
+			SpawnTrackBlock(CubeMesh, BaseMaterial, DashLocation, Rotation, FVector(3.2f, 0.085f, 0.045f), CenterLineColor, false, TEXT("UB_CenterDash"));
 		}
 
 		AddTrackGameplayPoints(SegmentStart, SegmentEnd, Right, RoadTopZ, Index);
@@ -348,15 +352,22 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 	const FVector StartDirection = (StartNext - StartLocation).GetSafeNormal2D();
 	const FVector StartRight = FVector::CrossProduct(FVector::UpVector, StartDirection).GetSafeNormal();
 	const FRotator StartRotation = StartDirection.Rotation();
-	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 125.0f + StartRight * 720.0f, StartRotation, FVector(0.22f, 0.14f, 2.5f), StartGateColor, false, TEXT("UB_StartGate_R"));
-	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 125.0f - StartRight * 720.0f, StartRotation, FVector(0.22f, 0.14f, 2.5f), StartGateColor, false, TEXT("UB_StartGate_L"));
-	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 250.0f, StartRotation, FVector(0.22f, 14.4f, 0.12f), StartGateColor, false, TEXT("UB_StartGate_Top"));
+	PrototypeTrackStartLocation = StartLocation + StartDirection * 650.0f + FVector::UpVector * 165.0f;
+	PrototypeTrackStartRotation = StartRotation;
+	bHasPrototypeTrackStart = true;
+
+	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 170.0f + StartRight * 720.0f, StartRotation, FVector(0.32f, 0.24f, 3.3f), StartGateColor, false, TEXT("UB_StartGate_R"));
+	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 170.0f - StartRight * 720.0f, StartRotation, FVector(0.32f, 0.24f, 3.3f), StartGateColor, false, TEXT("UB_StartGate_L"));
+	SpawnTrackBlock(CubeMesh, BaseMaterial, StartLocation + FVector::UpVector * 335.0f, StartRotation, FVector(0.32f, 15.4f, 0.2f), StartGateColor, false, TEXT("UB_StartGate_Top"));
+	SpawnTrackBlock(CubeMesh, BaseMaterial, PrototypeTrackStartLocation + FVector::UpVector * 360.0f, StartRotation, FVector(0.18f, 9.0f, 0.18f), FLinearColor(1.0f, 0.22f, 0.05f, 1.0f), false, TEXT("UB_OverheadMarker"));
+
+	MovePawnToPrototypeTrackStart(AnchorPawn);
 
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Spawned combat test track with %d pickup points and %d target points"), PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
 
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 7.0f, FColor::Cyan, TEXT("Combat test track spawned: wide road, rails, pickups and target lanes"));
+		GEngine->AddOnScreenDebugMessage(-1, 9.0f, FColor::Cyan, TEXT("COMBAT TEST TRACK spawned and car moved to the new start gate"));
 	}
 }
 
@@ -452,6 +463,26 @@ void UUBPowerPrototypeSubsystem::AddTrackGameplayPoints(const FVector& SegmentSt
 		const FVector TargetLocation = FMath::Lerp(SegmentStart, SegmentEnd, 0.58f) + Right * Lateral + FVector::UpVector * 88.0f;
 		PrototypeTargetTransforms.Add(FTransform(TargetRotation, TargetLocation, FVector::OneVector));
 	}
+}
+
+void UUBPowerPrototypeSubsystem::MovePawnToPrototypeTrackStart(APawn* AnchorPawn) const
+{
+	if (!AnchorPawn || !bHasPrototypeTrackStart)
+	{
+		return;
+	}
+
+	if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(AnchorPawn->GetRootComponent()))
+	{
+		if (RootPrimitive->IsSimulatingPhysics())
+		{
+			RootPrimitive->SetPhysicsLinearVelocity(FVector::ZeroVector, false);
+			RootPrimitive->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector, false);
+		}
+	}
+
+	AnchorPawn->SetActorLocationAndRotation(PrototypeTrackStartLocation, PrototypeTrackStartRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	AnchorPawn->ForceNetUpdate();
 }
 
 void UUBPowerPrototypeSubsystem::SpawnPrototypePickups(APawn* AnchorPawn)

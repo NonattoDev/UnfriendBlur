@@ -26,7 +26,7 @@ Antes de expandir conteudo, o objetivo e fazer um pequeno loop parecer jogo:
 7. ver feedback visual claro no alvo;
 8. juntar 3 poderes iguais e usar uma versao Super.
 
-Estado atual da pista: o Play gera um combat test track em runtime com asfalto, barreiras, linhas neon, pickups e carros-alvo. Isto destrava teste rapido, mas ainda nao e o mapa final em `.umap`.
+Estado atual da pista: o Play gera um combat test track em runtime com asfalto, barreiras, linhas neon, pickups e carros-alvo, e move o carro para a largada da pista nova. Isto destrava teste rapido, mas ainda nao e o mapa final em `.umap`.
 
 ## Agentes paralelos
 

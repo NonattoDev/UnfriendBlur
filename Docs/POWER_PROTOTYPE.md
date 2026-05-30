@@ -5,7 +5,7 @@
 1. Se o Unreal Editor estava aberto antes desta mudanca, reinicie uma vez para carregar as novas `UFUNCTIONs`.
 2. Abra `UnfriendBlur.uproject`.
 3. Clique em `Play` no mapa atual.
-4. O prototipo gera uma pista de combate grande a partir do carro: asfalto largo, barreiras laterais, marcacoes, linhas neon, pickups e carros-alvo.
+4. O prototipo gera uma pista de combate grande a partir do carro e move o carro para a largada dela: asfalto largo, barreiras laterais, marcacoes, linhas neon, pickups e carros-alvo.
 5. Pegue os pickups espalhados pela pista.
 6. Use as teclas do teclado:
 
@@ -39,6 +39,7 @@ Durante o Play, a tela mostra uma linha de debug com os 3 slots. O slot selecion
 ## Observacoes importantes
 
 - A pista gerada e temporaria e serve para teste rapido. Ela ainda nao substitui um `.umap` final com arte feita no Unreal.
+- Se voce ainda vir apenas a pista redonda antiga depois de atualizar, feche e reabra o Unreal para carregar a DLL C++ recompilada.
 - A pista tem barreiras fisicas, entao ja da para testar batidas, Boost ram, minas e perseguidores em um contexto mais parecido com corrida.
 - O assist arcade de controle foi desativado no prototipo para voltarmos ao controle nativo do template e corrigirmos a direcao aos poucos. Detalhes em `Docs/VEHICLE_CONTROL.md`.
 - Bolt, Shunt, Mine, Barge e Shock ficam muito mais claros quando existe outro carro/pawn no mapa para ser atingido.

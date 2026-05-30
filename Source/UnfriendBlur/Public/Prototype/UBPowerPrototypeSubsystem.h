@@ -30,6 +30,9 @@ private:
 	bool bSpawnedPrototypePickups = false;
 	bool bSpawnedPrototypeTargets = false;
 	bool bLoggedVehicleDiagnostics = false;
+	bool bHasPrototypeTrackStart = false;
+	FVector PrototypeTrackStartLocation = FVector::ZeroVector;
+	FRotator PrototypeTrackStartRotation = FRotator::ZeroRotator;
 	TArray<FVector> PrototypePickupLocations;
 	TArray<FTransform> PrototypeTargetTransforms;
 
@@ -41,6 +44,7 @@ private:
 	void ApplyTrackMaterial(UStaticMeshComponent* MeshComponent, UMaterialInterface* BaseMaterial, const FLinearColor& Color, float EmissiveStrength) const;
 	FVector TransformTrackPoint(const APawn* AnchorPawn, const FVector2D& LocalPoint, float RoadTopZ) const;
 	void AddTrackGameplayPoints(const FVector& SegmentStart, const FVector& SegmentEnd, const FVector& Right, float RoadTopZ, int32 SegmentIndex);
+	void MovePawnToPrototypeTrackStart(APawn* AnchorPawn) const;
 	void SpawnPrototypePickups(APawn* AnchorPawn);
 	FVector FindPickupLocation(APawn* AnchorPawn, int32 PickupIndex) const;
 	void SpawnPrototypeTargets(APawn* AnchorPawn);
