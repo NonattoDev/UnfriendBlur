@@ -5,12 +5,14 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "Powers/UBPowerInventoryComponent.h"
 #include "Powers/UBPowerPickup.h"
 #include "Powers/UBPowerTypes.h"
@@ -58,7 +60,14 @@ void UUBPowerPrototypeSubsystem::Tick(float DeltaTime)
 
 		if (!bSpawnedPrototypeTrack && World->GetNetMode() != NM_Client)
 		{
-			SpawnPrototypeTrack(PlayerController->GetPawn());
+			if (IsImportedDriftTrackWorld())
+			{
+				SetupImportedDriftTrack(PlayerController->GetPawn());
+			}
+			else
+			{
+				SpawnPrototypeTrack(PlayerController->GetPawn());
+			}
 		}
 
 		if (!bSpawnedPrototypePickups && World->GetNetMode() != NM_Client)
@@ -244,6 +253,78 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 			*Pawn->GetClass()->GetName(),
 			*MovementComponents,
 			Pawn->GetRootComponent() ? *Pawn->GetRootComponent()->GetClass()->GetName() : TEXT("none"));
+	}
+}
+
+bool UUBPowerPrototypeSubsystem::IsImportedDriftTrackWorld() const
+{
+	const UWorld* World = GetWorld();
+	return World && World->GetMapName().Contains(TEXT("L_DriftTrackShort"));
+}
+
+void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
+{
+	UWorld* World = GetWorld();
+	if (!World || !AnchorPawn || bSpawnedPrototypeTrack)
+	{
+		return;
+	}
+
+	bSpawnedPrototypeTrack = true;
+	bHasPrototypeTrackStart = true;
+	PrototypePickupLocations.Reset();
+	PrototypeTargetTransforms.Reset();
+
+	for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+	{
+		AStaticMeshActor* MeshActor = *It;
+		UStaticMeshComponent* MeshComponent = MeshActor ? MeshActor->GetStaticMeshComponent() : nullptr;
+		UStaticMesh* Mesh = MeshComponent ? MeshComponent->GetStaticMesh() : nullptr;
+		if (!Mesh || !Mesh->GetName().Equals(TEXT("SM_DriftTrackShort")))
+		{
+			continue;
+		}
+
+		if (UBodySetup* BodySetup = Mesh->GetBodySetup())
+		{
+			BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;
+		}
+
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+		MeshComponent->RecreatePhysicsState();
+	}
+
+	const FVector StartLocation = AnchorPawn->GetActorLocation() + FVector::UpVector * 40.0f;
+	const FVector Forward = AnchorPawn->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Right = AnchorPawn->GetActorRightVector().GetSafeNormal2D();
+	PrototypeTrackStartLocation = StartLocation;
+	PrototypeTrackStartRotation = FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f);
+
+	const float LateralPattern[] = { -420.0f, 0.0f, 420.0f, -180.0f, 220.0f };
+	for (int32 Index = 0; Index < 40; ++Index)
+	{
+		const float ForwardDistance = 1600.0f + static_cast<float>(Index) * 420.0f;
+		const float LateralDistance = LateralPattern[Index % UE_ARRAY_COUNT(LateralPattern)];
+		const FVector Candidate = StartLocation + Forward * ForwardDistance + Right * LateralDistance;
+		PrototypePickupLocations.Add(Candidate + FVector::UpVector * 80.0f);
+	}
+
+	for (int32 Index = 0; Index < 5; ++Index)
+	{
+		const float ForwardDistance = 2600.0f + static_cast<float>(Index) * 900.0f;
+		const float LateralDistance = Index % 2 == 0 ? -330.0f : 330.0f;
+		const FVector Candidate = StartLocation + Forward * ForwardDistance + Right * LateralDistance + FVector::UpVector * 90.0f;
+		PrototypeTargetTransforms.Add(FTransform(PrototypeTrackStartRotation, Candidate, FVector::OneVector));
+	}
+
+	MovePawnToPrototypeTrackStart(AnchorPawn);
+
+	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Using imported Drift Track Short map with %d pickup points and %d target points"), PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 9.0f, FColor::Cyan, TEXT("DRIFT TRACK SHORT loaded with power pickups and target cars"));
 	}
 }
 

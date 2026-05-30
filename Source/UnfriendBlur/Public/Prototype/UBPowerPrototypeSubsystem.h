@@ -39,6 +39,8 @@ private:
 	void TryInventoryHotkeys(APlayerController* PlayerController) const;
 	void DisplayInventory(APlayerController* PlayerController) const;
 	void DisplayVehicleDiagnostics(APlayerController* PlayerController);
+	bool IsImportedDriftTrackWorld() const;
+	void SetupImportedDriftTrack(APawn* AnchorPawn);
 	void SpawnPrototypeTrack(APawn* AnchorPawn);
 	AStaticMeshActor* SpawnTrackBlock(UStaticMesh* Mesh, UMaterialInterface* BaseMaterial, const FVector& Location, const FRotator& Rotation, const FVector& Scale, const FLinearColor& Color, bool bCollisionEnabled, const FString& ActorLabel) const;
 	void ApplyTrackMaterial(UStaticMeshComponent* MeshComponent, UMaterialInterface* BaseMaterial, const FLinearColor& Color, float EmissiveStrength) const;

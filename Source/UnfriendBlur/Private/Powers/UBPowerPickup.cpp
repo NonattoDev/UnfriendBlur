@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 #include "Powers/UBPowerInventoryComponent.h"
 #include "Powers/UBPowerVisuals.h"
@@ -113,6 +114,12 @@ void AUBPowerPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 void AUBPowerPickup::HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (!HasAuthority() || !bAvailable || !OtherActor)
+	{
+		return;
+	}
+
+	const APawn* OtherPawn = Cast<APawn>(OtherActor);
+	if (!OtherPawn || !OtherPawn->IsPlayerControlled())
 	{
 		return;
 	}
