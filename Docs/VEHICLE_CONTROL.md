@@ -15,6 +15,18 @@ O componente `UUBArcadeVehicleAssistComponent` existe, mas nao e mais adicionado
 
 Motivo: o assist interferiu demais na direcao. Voltamos ao controle nativo do template para corrigir o carro aos poucos.
 
+O prototipo agora mostra uma linha amarela `Vehicle debug` durante o Play. Ela nao muda fisica nem input; serve so para diagnostico.
+
+Essa linha mostra:
+
+- classe do Pawn atual;
+- teclas `W`, `A`, `S`, `D`, `Space` e `Shift` chegando ao PlayerController;
+- valor bruto de direcao por `A/D`;
+- velocidade aproximada em km/h;
+- yaw atual do carro.
+
+No log, o prototipo tambem registra os componentes de movimento/veiculo encontrados no Pawn.
+
 ## Diagnostico do que quebrou
 
 O erro foi tentar corrigir dirigibilidade por fora do sistema de veiculo, mexendo diretamente na fisica do corpo do carro.
@@ -28,6 +40,12 @@ As partes perigosas foram:
 - leitura manual de `A/D/Space/Shift`: ficava separada do Enhanced Input/Blueprint original.
 
 Resultado: a roda visual podia virar, mas o corpo fisico/velocidade do carro nao obedecia como o template esperava.
+
+Se a direcao ainda falhar, olhar primeiro a linha `Vehicle debug`:
+
+- se `A/D` nao mudam de `0` para `1`, o problema esta no input/viewport;
+- se `A/D` mudam, mas o carro nao gira, o problema esta no Blueprint/Chaos Vehicle/wheel setup;
+- se yaw muda, mas a trajetoria nao muda, ainda existe conflito de fisica/velocidade ou pneu sem aderencia lateral suficiente.
 
 Regra daqui para frente:
 

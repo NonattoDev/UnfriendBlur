@@ -24,9 +24,11 @@ private:
 	bool bPrintedInstructions = false;
 	bool bSpawnedPrototypePickups = false;
 	bool bSpawnedPrototypeTargets = false;
+	bool bLoggedVehicleDiagnostics = false;
 
 	void TryInventoryHotkeys(APlayerController* PlayerController) const;
 	void DisplayInventory(APlayerController* PlayerController) const;
+	void DisplayVehicleDiagnostics(APlayerController* PlayerController);
 	void SpawnPrototypePickups(APawn* AnchorPawn);
 	FVector FindPickupLocation(APawn* AnchorPawn, int32 PickupIndex) const;
 	void SpawnPrototypeTargets(APawn* AnchorPawn);

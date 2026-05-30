@@ -2,6 +2,7 @@
 
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Components/PrimitiveComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
@@ -17,6 +18,7 @@ void UUBPowerPrototypeSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	bPrintedInstructions = false;
 	bSpawnedPrototypePickups = false;
 	bSpawnedPrototypeTargets = false;
+	bLoggedVehicleDiagnostics = false;
 }
 
 void UUBPowerPrototypeSubsystem::Tick(float DeltaTime)
@@ -53,6 +55,7 @@ void UUBPowerPrototypeSubsystem::Tick(float DeltaTime)
 
 		TryInventoryHotkeys(PlayerController);
 		DisplayInventory(PlayerController);
+		DisplayVehicleDiagnostics(PlayerController);
 	}
 }
 
@@ -140,6 +143,80 @@ void UUBPowerPrototypeSubsystem::DisplayInventory(APlayerController* PlayerContr
 
 	InventoryText += TEXT("| F select | B front | N back | G drop");
 	GEngine->AddOnScreenDebugMessage(9001, 0.05f, FColor::White, InventoryText);
+}
+
+void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* PlayerController)
+{
+	if (!GEngine || !PlayerController)
+	{
+		return;
+	}
+
+	APawn* Pawn = PlayerController->GetPawn();
+	if (!Pawn)
+	{
+		return;
+	}
+
+	const bool bW = PlayerController->IsInputKeyDown(EKeys::W);
+	const bool bA = PlayerController->IsInputKeyDown(EKeys::A);
+	const bool bS = PlayerController->IsInputKeyDown(EKeys::S);
+	const bool bD = PlayerController->IsInputKeyDown(EKeys::D);
+	const bool bSpace = PlayerController->IsInputKeyDown(EKeys::SpaceBar);
+	const bool bShift = PlayerController->IsInputKeyDown(EKeys::LeftShift) || PlayerController->IsInputKeyDown(EKeys::RightShift);
+
+	UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(Pawn->GetRootComponent());
+	const FVector Velocity = RootPrimitive ? RootPrimitive->GetPhysicsLinearVelocity() : Pawn->GetVelocity();
+	const float SpeedKmh = Velocity.Size() * 0.036f;
+	const float SteerRaw = (bD ? 1.0f : 0.0f) - (bA ? 1.0f : 0.0f);
+
+	FString MovementComponents;
+	for (const UActorComponent* Component : Pawn->GetComponents())
+	{
+		if (!Component)
+		{
+			continue;
+		}
+
+		const FString ComponentClassName = Component->GetClass()->GetName();
+		if (ComponentClassName.Contains(TEXT("Movement")) || ComponentClassName.Contains(TEXT("Vehicle")))
+		{
+			if (!MovementComponents.IsEmpty())
+			{
+				MovementComponents += TEXT(", ");
+			}
+			MovementComponents += ComponentClassName;
+		}
+	}
+
+	if (MovementComponents.IsEmpty())
+	{
+		MovementComponents = TEXT("none found");
+	}
+
+	const FString InputText = FString::Printf(
+		TEXT("Vehicle debug | %s | W:%d A:%d S:%d D:%d Space:%d Shift:%d | steer raw %.0f | %.0f km/h | yaw %.0f"),
+		*Pawn->GetClass()->GetName(),
+		bW ? 1 : 0,
+		bA ? 1 : 0,
+		bS ? 1 : 0,
+		bD ? 1 : 0,
+		bSpace ? 1 : 0,
+		bShift ? 1 : 0,
+		SteerRaw,
+		SpeedKmh,
+		Pawn->GetActorRotation().Yaw);
+
+	GEngine->AddOnScreenDebugMessage(9002, 0.05f, FColor::Yellow, InputText);
+
+	if (!bLoggedVehicleDiagnostics)
+	{
+		bLoggedVehicleDiagnostics = true;
+		UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Vehicle Debug] Pawn=%s Components=%s Root=%s"),
+			*Pawn->GetClass()->GetName(),
+			*MovementComponents,
+			Pawn->GetRootComponent() ? *Pawn->GetRootComponent()->GetClass()->GetName() : TEXT("none"));
+	}
 }
 
 void UUBPowerPrototypeSubsystem::SpawnPrototypePickups(APawn* AnchorPawn)
