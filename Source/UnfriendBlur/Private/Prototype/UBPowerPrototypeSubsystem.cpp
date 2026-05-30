@@ -275,12 +275,21 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 	PrototypePickupLocations.Reset();
 	PrototypeTargetTransforms.Reset();
 
+	int32 ConfiguredTrackMeshCount = 0;
 	for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
 	{
 		AStaticMeshActor* MeshActor = *It;
 		UStaticMeshComponent* MeshComponent = MeshActor ? MeshActor->GetStaticMeshComponent() : nullptr;
 		UStaticMesh* Mesh = MeshComponent ? MeshComponent->GetStaticMesh() : nullptr;
-		if (!Mesh || !Mesh->GetName().Equals(TEXT("SM_DriftTrackShort")))
+		if (!Mesh)
+		{
+			continue;
+		}
+
+		const FString MeshName = Mesh->GetName();
+		if (MeshName.Contains(TEXT("Collidior"), ESearchCase::IgnoreCase) ||
+			MeshName.Contains(TEXT("Collider"), ESearchCase::IgnoreCase) ||
+			MeshName.Contains(TEXT("Collision"), ESearchCase::IgnoreCase))
 		{
 			continue;
 		}
@@ -293,6 +302,7 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
 		MeshComponent->RecreatePhysicsState();
+		++ConfiguredTrackMeshCount;
 	}
 
 	const FVector StartLocation = AnchorPawn->GetActorLocation() + FVector::UpVector * 40.0f;
@@ -320,7 +330,7 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 
 	MovePawnToPrototypeTrackStart(AnchorPawn);
 
-	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Using imported Drift Track Short map with %d pickup points and %d target points"), PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
+	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Using imported Drift Track Short map with %d mesh parts, %d pickup points and %d target points"), ConfiguredTrackMeshCount, PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
 
 	if (GEngine)
 	{

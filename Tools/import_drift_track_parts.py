@@ -2,7 +2,7 @@ import unreal
 
 
 SOURCE_FBX = r"C:/GamesDev/UnfriendBlur/Saved/ImportedAssets/DriftTrackShort/RaceTrackExport/Track.fbx"
-DESTINATION = "/Game/UnfriendBlur/Downloaded/DriftTrackShort"
+DESTINATION = "/Game/UnfriendBlur/Downloaded/DriftTrackShortParts"
 
 
 def configure_fbx_import():
@@ -15,10 +15,7 @@ def configure_fbx_import():
     options.set_editor_property("mesh_type_to_import", unreal.FBXImportType.FBXIT_STATIC_MESH)
 
     static_mesh_options = options.get_editor_property("static_mesh_import_data")
-    static_mesh_options.set_editor_property("combine_meshes", True)
-    # The downloaded FBX contains translucent collision/helper geometry
-    # named "Collidior". Nanite renders that material as opaque black blocks,
-    # so keep Nanite disabled for this imported test track.
+    static_mesh_options.set_editor_property("combine_meshes", False)
     static_mesh_options.set_editor_property("build_nanite", False)
     static_mesh_options.set_editor_property("generate_lightmap_u_vs", True)
     static_mesh_options.set_editor_property("auto_generate_collision", False)
@@ -26,41 +23,24 @@ def configure_fbx_import():
     return options
 
 
-def set_complex_collision(asset_paths):
-    for asset_path in asset_paths:
-        asset = unreal.EditorAssetLibrary.load_asset(asset_path)
-        if isinstance(asset, unreal.StaticMesh):
-            body_setup = asset.get_editor_property("body_setup")
-            if body_setup:
-                body_setup.set_editor_property(
-                    "collision_trace_flag",
-                    unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE,
-                )
-                asset.modify()
-                unreal.EditorAssetLibrary.save_loaded_asset(asset)
-                unreal.log("Configured complex collision: {}".format(asset_path))
-
-
 def main():
-    unreal.log("Importing Drift Track Short from {}".format(SOURCE_FBX))
+    unreal.log("Importing Drift Track Short as separated static meshes from {}".format(SOURCE_FBX))
+
+    if unreal.EditorAssetLibrary.does_directory_exist(DESTINATION):
+        unreal.EditorAssetLibrary.delete_directory(DESTINATION)
+    unreal.EditorAssetLibrary.make_directory(DESTINATION)
 
     task = unreal.AssetImportTask()
     task.set_editor_property("filename", SOURCE_FBX)
     task.set_editor_property("destination_path", DESTINATION)
-    task.set_editor_property("destination_name", "SM_DriftTrackShort")
     task.set_editor_property("automated", True)
     task.set_editor_property("replace_existing", True)
     task.set_editor_property("save", True)
     task.set_editor_property("options", configure_fbx_import())
 
     unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
-
-    imported_paths = list(task.get_editor_property("imported_object_paths") or [])
-    unreal.log("Imported Drift Track assets: {}".format(imported_paths))
-    set_complex_collision(imported_paths)
-
+    unreal.log("Part import paths: {}".format(list(task.get_editor_property("imported_object_paths") or [])))
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-    unreal.log("Drift Track import finished")
 
 
 if __name__ == "__main__":
