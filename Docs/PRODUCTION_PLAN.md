@@ -18,12 +18,15 @@ UnfriendBlur deve parecer um combat racer arcade premium:
 Antes de expandir conteudo, o objetivo e fazer um pequeno loop parecer jogo:
 
 1. dirigir com controle confiavel;
-2. pegar pickup na pista;
-3. ver o poder nos 3 slots;
-4. usar Bolt/Shunt/Mine/Boost contra outro carro;
-5. aplicar dano/slow/impacto real;
-6. ver feedback visual claro no alvo;
-7. juntar 3 poderes iguais e usar uma versao Super.
+2. testar em uma pista de combate larga, com barreiras e alvos;
+3. pegar pickup na pista;
+4. ver o poder nos 3 slots;
+5. usar Bolt/Shunt/Mine/Boost contra outro carro;
+6. aplicar dano/slow/impacto real;
+7. ver feedback visual claro no alvo;
+8. juntar 3 poderes iguais e usar uma versao Super.
+
+Estado atual da pista: o Play gera um combat test track em runtime com asfalto, barreiras, linhas neon, pickups e carros-alvo. Isto destrava teste rapido, mas ainda nao e o mapa final em `.umap`.
 
 ## Agentes paralelos
 
@@ -97,7 +100,18 @@ Criar HUD simples por jogador:
 
 Motivo: o jogo precisa parar de depender de texto debug para parecer jogavel.
 
-### 3. Controle do carro
+### 3. Mapa/pista
+
+Estado atual: pista gerada em runtime.
+
+Proximo ajuste desta frente:
+
+- validar largura, curvas e distancia entre alvos no Play;
+- ajustar o layout ate ficar bom para combate;
+- depois duplicar/criar mapa em `Content/UnfriendBlur/Maps`;
+- posicionar pickups reais e elementos visuais pelo editor.
+
+### 4. Controle do carro
 
 Seguir em etapas:
 
@@ -106,7 +120,7 @@ Seguir em etapas:
 - adicionar drift e estabilidade por pequenas mudancas testaveis;
 - nunca sobrescrever velocidade linear/angular todo tick para corrigir curva.
 
-### 4. Visual real dos poderes
+### 5. Visual real dos poderes
 
 Comecar por 3 poderes que vendem o jogo:
 

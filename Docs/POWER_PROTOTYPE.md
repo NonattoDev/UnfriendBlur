@@ -5,8 +5,9 @@
 1. Se o Unreal Editor estava aberto antes desta mudanca, reinicie uma vez para carregar as novas `UFUNCTIONs`.
 2. Abra `UnfriendBlur.uproject`.
 3. Clique em `Play` no mapa atual.
-4. Pegue os pickups aleatorios que aparecem no mapa.
-5. Use as teclas do teclado:
+4. O prototipo gera uma pista de combate grande a partir do carro: asfalto largo, barreiras laterais, marcacoes, linhas neon, pickups e carros-alvo.
+5. Pegue os pickups espalhados pela pista.
+6. Use as teclas do teclado:
 
 | Tecla | Acao |
 | --- | --- |
@@ -17,9 +18,9 @@
 
 O inventario tem 3 slots. As teclas `1` a `8` nao adicionam poder; os slots enchem somente ao pegar pickups.
 
-No prototipo atual, o jogo spawna 32 pickups automaticamente pelo mapa em aneis ao redor do carro quando o Play comeca. Eles sao distribuidos em ciclo entre os 8 poderes para existir quantidade suficiente para testar fusoes.
+No prototipo atual, o jogo spawna pickups automaticamente ao longo da pista de combate. Eles sao distribuidos em ciclo entre os 8 poderes para existir quantidade suficiente para testar fusoes.
 
-O prototipo tambem spawna 2 carros-alvo a frente do jogador quando o Play comeca. Eles usam a mesh `SM_SportsCar`, tem hitbox fisica e recebem hits dos poderes para testar Bolt, Shunt, Mine, Barge, Shock, Boost e Super Boost.
+O prototipo tambem spawna varios carros-alvo ao longo da pista. Eles usam a mesh `SM_SportsCar`, tem hitbox fisica e recebem hits dos poderes para testar Bolt, Shunt, Mine, Barge, Shock, Boost e Super Boost.
 
 Se voce juntar 3 poderes iguais, eles viram 1 Super Power automaticamente. Exemplo: 3 Boosts viram 1 Super Boost. Se o inventario estiver cheio com 2 poderes iguais e voce pegar o terceiro igual, a fusao tambem acontece.
 
@@ -37,6 +38,8 @@ Durante o Play, a tela mostra uma linha de debug com os 3 slots. O slot selecion
 
 ## Observacoes importantes
 
+- A pista gerada e temporaria e serve para teste rapido. Ela ainda nao substitui um `.umap` final com arte feita no Unreal.
+- A pista tem barreiras fisicas, entao ja da para testar batidas, Boost ram, minas e perseguidores em um contexto mais parecido com corrida.
 - O assist arcade de controle foi desativado no prototipo para voltarmos ao controle nativo do template e corrigirmos a direcao aos poucos. Detalhes em `Docs/VEHICLE_CONTROL.md`.
 - Bolt, Shunt, Mine, Barge e Shock ficam muito mais claros quando existe outro carro/pawn no mapa para ser atingido.
 - Os carros-alvo sao apenas bonecos de teste por enquanto: nao dirigem sozinhos, mas recebem impacto fisico e podem ser usados como alvo do Shunt.
@@ -96,5 +99,6 @@ O proximo passo tecnico e criar:
 
 - HUD simples de inventario mostrando os 3 icones.
 - Visual de dano/slow no alvo, nao apenas texto debug.
+- Transformar a pista gerada em mapa Unreal proprio quando o layout agradar.
 - Input real com Enhanced Input em vez das hotkeys temporarias.
 - Pickups posicionados na pista.
