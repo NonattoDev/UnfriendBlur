@@ -135,7 +135,7 @@ void UUBPowerPrototypeSubsystem::TryInventoryHotkeys(APlayerController* PlayerCo
 
 void UUBPowerPrototypeSubsystem::DisplayInventory(APlayerController* PlayerController) const
 {
-	if (!GEngine || !PlayerController)
+	if (!PlayerController)
 	{
 		return;
 	}
@@ -149,7 +149,6 @@ void UUBPowerPrototypeSubsystem::DisplayInventory(APlayerController* PlayerContr
 	const UUBPowerInventoryComponent* PowerComponent = Pawn->FindComponentByClass<UUBPowerInventoryComponent>();
 	if (!PowerComponent)
 	{
-		GEngine->AddOnScreenDebugMessage(9001, 0.05f, FColor::White, TEXT("Powers: [empty] | collect pickups | F select | B front | N back | G drop"));
 		return;
 	}
 
@@ -171,12 +170,12 @@ void UUBPowerPrototypeSubsystem::DisplayInventory(APlayerController* PlayerContr
 	}
 
 	InventoryText += TEXT("| F select | B front | N back | G drop");
-	GEngine->AddOnScreenDebugMessage(9001, 0.05f, FColor::White, InventoryText);
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[UnfriendBlur Powers] %s"), *InventoryText);
 }
 
 void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* PlayerController)
 {
-	if (!GEngine || !PlayerController)
+	if (!PlayerController)
 	{
 		return;
 	}
@@ -246,7 +245,7 @@ void UUBPowerPrototypeSubsystem::DisplayVehicleDiagnostics(APlayerController* Pl
 		*HealthText,
 		*StatusText);
 
-	GEngine->AddOnScreenDebugMessage(9002, 0.05f, FColor::Yellow, InputText);
+	UE_LOG(LogTemp, VeryVerbose, TEXT("[UnfriendBlur Vehicle Debug] %s"), *InputText);
 
 	if (!bLoggedVehicleDiagnostics)
 	{
@@ -359,10 +358,6 @@ void UUBPowerPrototypeSubsystem::SetupImportedDriftTrack(APawn* AnchorPawn)
 
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Using imported Drift Track Short map with %d mesh parts, %d pickup points and %d target points"), ConfiguredTrackMeshCount, PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 9.0f, FColor::Cyan, TEXT("DRIFT TRACK SHORT loaded with power pickups and target cars"));
-	}
 }
 
 void UUBPowerPrototypeSubsystem::BuildImportedDriftTrackGameplayRoute(APawn* AnchorPawn)
@@ -682,10 +677,6 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Track] Spawned combat test track with %d pickup points and %d target points"), PrototypePickupLocations.Num(), PrototypeTargetTransforms.Num());
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 9.0f, FColor::Cyan, TEXT("COMBAT TEST TRACK spawned and car moved to the new start gate"));
-	}
 }
 
 AStaticMeshActor* UUBPowerPrototypeSubsystem::SpawnTrackBlock(UStaticMesh* Mesh, UMaterialInterface* BaseMaterial, const FVector& Location, const FRotator& Rotation, const FVector& Scale, const FLinearColor& Color, bool bCollisionEnabled, const FString& ActorLabel) const
@@ -845,10 +836,6 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypePickups(APawn* AnchorPawn)
 
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Powers] Spawned %d prototype pickups"), PickupCount);
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 6.0f, FColor::Cyan, TEXT("Power pickups spawned along the combat track"));
-	}
 }
 
 FVector UUBPowerPrototypeSubsystem::FindPickupLocation(APawn* AnchorPawn, int32 PickupIndex) const
@@ -913,10 +900,6 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTargets(APawn* AnchorPawn)
 
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Powers] Spawned %d prototype target cars"), TargetCount);
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 6.0f, FColor::Orange, TEXT("Target cars spawned along the combat track"));
-	}
 }
 
 FTransform UUBPowerPrototypeSubsystem::FindTargetCarTransform(APawn* AnchorPawn, int32 TargetIndex) const
@@ -971,9 +954,4 @@ void UUBPowerPrototypeSubsystem::PrintInstructions()
 {
 	const FString Message = TEXT("UnfriendBlur: combat test track | F slot | B front power | N back power | G drop");
 	UE_LOG(LogTemp, Log, TEXT("%s"), *Message);
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 8.0f, FColor::Green, Message);
-	}
 }

@@ -1275,9 +1275,4 @@ void UUBPowerInventoryComponent::SpawnPowerFx(EUBPowerType PowerType, const FVec
 void UUBPowerInventoryComponent::ShowPowerMessage(const FString& Message) const
 {
 	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Powers] %s"), *Message);
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.5f, FColor::Yellow, Message);
-	}
 }

@@ -14,6 +14,7 @@
 #include "Powers/UBPowerVisuals.h"
 #include "Prototype/UBPowerPrototypeSubsystem.h"
 #include "Prototype/UBPrototypeTargetCar.h"
+#include "UI/UBCombatHudWidget.h"
 #include "Vehicle/UBVehicleHealthComponent.h"
 
 AUBCombatHud::AUBCombatHud()
@@ -45,11 +46,36 @@ void AUBCombatHud::BeginPlay()
 		RearViewCapture->bCaptureOnMovement = false;
 		RearViewCapture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_RenderScenePrimitives;
 	}
+
+	if (PlayerOwner && PlayerOwner->IsLocalController())
+	{
+		CombatHudWidget = CreateWidget<UUBCombatHudWidget>(PlayerOwner, UUBCombatHudWidget::StaticClass());
+		if (CombatHudWidget)
+		{
+			CombatHudWidget->AddToPlayerScreen(0);
+		}
+	}
+}
+
+void AUBCombatHud::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (CombatHudWidget)
+	{
+		CombatHudWidget->RemoveFromParent();
+		CombatHudWidget = nullptr;
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AUBCombatHud::DrawHUD()
 {
 	Super::DrawHUD();
+
+	if (CombatHudWidget)
+	{
+		return;
+	}
 
 	if (!Canvas || !PlayerOwner)
 	{
@@ -486,6 +512,14 @@ void AUBCombatHud::UpdateRearViewCapture(APawn* PlayerPawn)
 	{
 		return;
 	}
+
+	const UWorld* World = GetWorld();
+	const float CurrentTime = World ? World->GetTimeSeconds() : 0.0f;
+	if (CurrentTime - LastRearViewCaptureTime < 0.05f)
+	{
+		return;
+	}
+	LastRearViewCaptureTime = CurrentTime;
 
 	const FVector Forward = PlayerPawn->GetActorForwardVector().GetSafeNormal();
 	const FVector CaptureLocation = PlayerPawn->GetActorLocation() + FVector::UpVector * 190.0f + Forward * 120.0f;

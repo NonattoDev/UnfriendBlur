@@ -13,13 +13,16 @@ public class UnfriendBlur : ModuleRules
 			"Engine",
 			"EnhancedInput",
 			"InputCore",
-			"NetCore"
+			"NetCore",
+			"SlateCore",
+			"UMG"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new[]
 		{
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			"Slate"
 		});
 	}
 }

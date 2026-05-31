@@ -10,6 +10,7 @@ class USceneCaptureComponent2D;
 class UTexture;
 class UTexture2D;
 class UTextureRenderTarget2D;
+class UUBCombatHudWidget;
 
 UCLASS()
 class UNFRIENDBLUR_API AUBCombatHud : public AHUD
@@ -19,7 +20,17 @@ class UNFRIENDBLUR_API AUBCombatHud : public AHUD
 public:
 	AUBCombatHud();
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void DrawHUD() override;
+
+	void GatherTargetCars(TArray<AUBPrototypeTargetCar*>& OutTargetCars) const;
+	float GetActorSpeedKmh(const AActor* Actor) const;
+	float ComputeRouteProgress(const AActor* Actor, const TArray<FVector>& RaceWaypoints) const;
+	FVector2D ProjectToMiniMap(const FVector& WorldLocation, const TArray<FVector>& RaceWaypoints, const FVector2D& Center, float Radius) const;
+	FString FormatOrdinal(int32 Position) const;
+	UTexture2D* GetCachedPowerIcon(EUBPowerType PowerType, bool bIsSuper);
+	UTextureRenderTarget2D* GetRearViewRenderTarget() const { return RearViewRenderTarget; }
+	void UpdateRearViewCapture(APawn* PlayerPawn);
 
 private:
 	struct FUBRaceEntry
@@ -38,13 +49,6 @@ private:
 	void DrawSoftBar(float X, float Y, float Width, float Height, float FillAlpha, const FLinearColor& FillColor, const FLinearColor& BackColor);
 	void DrawTextureFit(UTexture2D* Texture, float X, float Y, float Width, float Height, const FLinearColor& TintColor);
 	void DrawTextureFit(UTexture* Texture, float X, float Y, float Width, float Height, const FLinearColor& TintColor);
-	void GatherTargetCars(TArray<AUBPrototypeTargetCar*>& OutTargetCars) const;
-	float GetActorSpeedKmh(const AActor* Actor) const;
-	float ComputeRouteProgress(const AActor* Actor, const TArray<FVector>& RaceWaypoints) const;
-	FVector2D ProjectToMiniMap(const FVector& WorldLocation, const TArray<FVector>& RaceWaypoints, const FVector2D& Center, float Radius) const;
-	FString FormatOrdinal(int32 Position) const;
-	UTexture2D* GetCachedPowerIcon(EUBPowerType PowerType, bool bIsSuper);
-	void UpdateRearViewCapture(APawn* PlayerPawn);
 
 	UPROPERTY(Transient)
 	TObjectPtr<USceneCaptureComponent2D> RearViewCapture;
@@ -54,4 +58,9 @@ private:
 
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<UTexture2D>> PowerIconCache;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UUBCombatHudWidget> CombatHudWidget;
+
+	float LastRearViewCaptureTime = -1000.0f;
 };
