@@ -19,7 +19,7 @@ O componente `UUBArcadeVehicleAssistComponent` voltou a ser adicionado automatic
 - o spawn do carro no prototipo usa clearance baixo para nao comecar caindo/flutuando;
 - o carro so e considerado apoiado quando esta perto do solo; ver o chao a distancia nao basta;
 - `Space` nao aciona mais handbrake fisico do Chaos enquanto a suspensao/base do carro nao estiver estavel;
-- se o carro nascer alguns centimetros acima do ideal, um assist leve faz ele assentar sem depender do jogador apertar `Space`;
+- se o carro nascer acima do alvo, ele e reposicionado para baixo ate a altura de repouso; nao depende mais de gravidade, `Space` ou handbrake;
 - toda rodada de teste do jogador local grava telemetria em `Saved/HandlingTelemetry.csv`.
 
 O prototipo tambem mostra uma linha amarela `Vehicle debug` durante o Play. Ela serve para diagnostico rapido do input e do estado do carro.

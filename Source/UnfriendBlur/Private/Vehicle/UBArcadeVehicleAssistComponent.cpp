@@ -387,13 +387,26 @@ void UUBArcadeVehicleAssistComponent::ApplyGroundSettleAssist(UPrimitiveComponen
 		return;
 	}
 
-	FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	AActor* OwnerActor = GetOwner();
+	const FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	if (OwnerActor && Velocity.Size2D() <= GroundSnapMaxSpeed && GroundDistance > RestingGroundDistance + GroundSnapTolerance)
+	{
+		const float SnapDownDistance = GroundDistance - RestingGroundDistance;
+		OwnerActor->SetActorLocation(OwnerActor->GetActorLocation() - FVector::UpVector * SnapDownDistance, false, nullptr, ETeleportType::TeleportPhysics);
+		FVector SnappedVelocity = Velocity;
+		SnappedVelocity.Z = FMath::Min(SnappedVelocity.Z, 0.0f);
+		Primitive->SetPhysicsLinearVelocity(SnappedVelocity, false);
+		Primitive->WakeAllRigidBodies();
+		return;
+	}
+
 	const float ErrorAlpha = FMath::Clamp((GroundDistance - RestingGroundDistance) / FMath::Max(GroundSettleMaxDistance - RestingGroundDistance, 1.0f), 0.0f, 1.0f);
 	const float TargetDownVelocity = -FMath::Lerp(55.0f, GroundSettleMaxDownVelocity, ErrorAlpha);
 	if (Velocity.Z > TargetDownVelocity)
 	{
-		Velocity.Z = TargetDownVelocity;
-		Primitive->SetPhysicsLinearVelocity(Velocity, false);
+		FVector SettledVelocity = Velocity;
+		SettledVelocity.Z = TargetDownVelocity;
+		Primitive->SetPhysicsLinearVelocity(SettledVelocity, false);
 		Primitive->WakeAllRigidBodies();
 	}
 }
