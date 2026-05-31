@@ -1,5 +1,6 @@
 #include "Vehicle/UBArcadeVehicleAssistComponent.h"
 
+#include "ChaosVehicleMovementComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -41,6 +42,15 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	}
 
 	UPrimitiveComponent* Primitive = CachedPrimitive.Get();
+	UChaosVehicleMovementComponent* VehicleMovement = CachedVehicleMovement.Get();
+	if (!VehicleMovement)
+	{
+		VehicleMovement = FindVehicleMovement();
+		CachedVehicleMovement = VehicleMovement;
+	}
+
+	ApplyChaosVehicleInput(VehicleMovement);
+
 	if (!Primitive || !Primitive->IsSimulatingPhysics())
 	{
 		Primitive = FindBestPrimitive();
@@ -56,13 +66,25 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	const bool bGrounded = IsGrounded(GroundDistance);
 	const float Speed = Primitive->GetPhysicsLinearVelocity().Size2D();
 
-	ApplyThrottleBrakeAssist(Primitive, DeltaTime, bGrounded);
+	if (bEnablePhysicsThrottleFallback)
+	{
+		ApplyThrottleBrakeAssist(Primitive, DeltaTime, bGrounded);
+	}
 	ApplyDownforce(Primitive, Speed, bGrounded);
 	ApplyAntiFlipStability(Primitive, bGrounded);
 	ApplyCurbLaunchClamp(Primitive, bGrounded, GroundDistance);
-	ApplyArcadeSteering(Primitive, DeltaTime, Speed, bGrounded);
-	ApplySteeringAndDriftAssist(Primitive, DeltaTime, Speed);
-	ApplyNormalGripAssist(Primitive, DeltaTime);
+	if (bEnableArcadeSteeringAssist)
+	{
+		ApplyArcadeSteering(Primitive, DeltaTime, Speed, bGrounded);
+	}
+	if (bEnableDriftAssist)
+	{
+		ApplySteeringAndDriftAssist(Primitive, DeltaTime, Speed);
+	}
+	if (bEnableNormalGripAssist)
+	{
+		ApplyNormalGripAssist(Primitive, DeltaTime);
+	}
 	ApplyVelocitySafetyClamp(Primitive);
 	RecordTelemetry(DeltaTime, Primitive, bGrounded, GroundDistance);
 
@@ -77,10 +99,17 @@ void UUBArcadeVehicleAssistComponent::SetAssistEnabled(bool bEnabled)
 	if (bAssistEnabled)
 	{
 		CachedPrimitive = FindBestPrimitive();
+		CachedVehicleMovement = FindVehicleMovement();
 		BindHitHandler();
 		if (CachedPrimitive)
 		{
 			CachedPrimitive->WakeAllRigidBodies();
+		}
+		if (CachedVehicleMovement)
+		{
+			CachedVehicleMovement->SetSleeping(false);
+			CachedVehicleMovement->SetParked(false);
+			CachedVehicleMovement->SetUseAutomaticGears(true);
 		}
 
 		InitializeTelemetry();
@@ -146,6 +175,12 @@ UPrimitiveComponent* UUBArcadeVehicleAssistComponent::FindBestPrimitive() const
 	}
 
 	return Primitive ? Primitive : OwnerActor->FindComponentByClass<UPrimitiveComponent>();
+}
+
+UChaosVehicleMovementComponent* UUBArcadeVehicleAssistComponent::FindVehicleMovement() const
+{
+	const AActor* OwnerActor = GetOwner();
+	return OwnerActor ? OwnerActor->FindComponentByClass<UChaosVehicleMovementComponent>() : nullptr;
 }
 
 bool UUBArcadeVehicleAssistComponent::IsGrounded(float& OutGroundDistance) const
@@ -239,6 +274,22 @@ bool UUBArcadeVehicleAssistComponent::IsDriftInputDown() const
 	return PlayerController
 		&& PlayerController->IsLocalController()
 		&& PlayerController->IsInputKeyDown(EKeys::SpaceBar);
+}
+
+void UUBArcadeVehicleAssistComponent::ApplyChaosVehicleInput(UChaosVehicleMovementComponent* VehicleMovement) const
+{
+	if (!VehicleMovement || !bDriveChaosVehicleInput)
+	{
+		return;
+	}
+
+	VehicleMovement->SetSleeping(false);
+	VehicleMovement->SetParked(false);
+	VehicleMovement->SetUseAutomaticGears(true);
+	VehicleMovement->SetThrottleInput(GetThrottleInput());
+	VehicleMovement->SetBrakeInput(GetBrakeInput());
+	VehicleMovement->SetSteeringInput(GetSteeringInput());
+	VehicleMovement->SetHandbrakeInput(IsDriftInputDown());
 }
 
 void UUBArcadeVehicleAssistComponent::ApplyThrottleBrakeAssist(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const
@@ -436,7 +487,10 @@ void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveCompone
 	const float ClampedSideSpeed = FMath::Clamp(SideSpeed, -SideSpeedLimit, SideSpeedLimit);
 	const float ClampedUpSpeed = FMath::Clamp(Velocity.Z, -MaxDownVelocity, MaxNearGroundUpVelocity);
 
-	Primitive->SetPhysicsLinearVelocity(Forward * ForwardSpeed + Right * ClampedSideSpeed + FVector::UpVector * ClampedUpSpeed, false);
+	if (!FMath::IsNearlyEqual(ClampedSideSpeed, SideSpeed, 0.1f) || !FMath::IsNearlyEqual(ClampedUpSpeed, Velocity.Z, 0.1f) || HorizontalSpeed > MaxPlanarSpeed)
+	{
+		Primitive->SetPhysicsLinearVelocity(Forward * ForwardSpeed + Right * ClampedSideSpeed + FVector::UpVector * ClampedUpSpeed, false);
+	}
 }
 
 void UUBArcadeVehicleAssistComponent::HandleOwnerComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)

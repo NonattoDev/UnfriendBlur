@@ -11,9 +11,12 @@ Este documento registra o ajuste rapido de dirigibilidade do prototipo.
 
 ## Estado atual
 
-O componente `UUBArcadeVehicleAssistComponent` voltou a ser adicionado automaticamente no Play, mas agora com duas regras:
+O componente `UUBArcadeVehicleAssistComponent` voltou a ser adicionado automaticamente no Play, mas agora com tres regras:
 
+- o input de `W/A/S/D/Space` e enviado diretamente para o `ChaosVehicleMovementComponent`;
+- enquanto o Blueprint do carro nao responde bem sozinho, existe um fallback fisico controlado para aceleracao e curva;
 - qualquer assist fisico precisa ter limite de velocidade/forca para nao explodir a simulacao;
+- o spawn do carro no prototipo usa clearance baixo para nao comecar caindo/flutuando;
 - toda rodada de teste do jogador local grava telemetria em `Saved/HandlingTelemetry.csv`.
 
 O prototipo tambem mostra uma linha amarela `Vehicle debug` durante o Play. Ela serve para diagnostico rapido do input e do estado do carro.
@@ -70,6 +73,7 @@ Regra daqui para frente:
 
 - nao alterar velocidade linear do carro a cada tick para corrigir curva;
 - nao teletransportar a rotacao do ator para corrigir curva;
+- nao usar `AddForce` sem telemetria, limite e comparacao de resultado;
 - primeiro ajustar input/Blueprint/Chaos Vehicle Movement;
 - depois adicionar assist fisico pequeno, isolado e testado um por vez.
 
@@ -80,9 +84,10 @@ Regra daqui para frente:
 - Amortecimento de roll/pitch no ar.
 - Limitador de lancamento vertical perto do chao, principalmente em laterais/lombadas.
 - Amortecimento ao bater em parede/lateral da pista.
-- Curva arcade leve: quando A/D vira a roda, a direcao da velocidade acompanha levemente a curva.
-- Clamp de velocidade planar, lateral e vertical para impedir lancamentos absurdos.
-- Drift assist somente com `Space` + direcao.
+- Fallback de aceleracao por `AddForce`, limitado por velocidade maxima.
+- Assist leve de curva por velocidade/angular velocity, sem teletransportar rotacao.
+- Clamp de velocidade planar, lateral e vertical somente quando o carro passa dos limites de seguranca.
+- `Space` aciona handbrake diretamente no Chaos Vehicle.
 - Telemetria de handling para comparar ajuste por ajuste.
 - `Shift` fica livre para virar olhar para tras quando conectarmos a camera/input final.
 

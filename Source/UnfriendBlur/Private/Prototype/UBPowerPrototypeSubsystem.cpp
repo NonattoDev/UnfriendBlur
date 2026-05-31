@@ -328,6 +328,11 @@ void UUBPowerPrototypeSubsystem::ConfigurePrototypeVehicleHandling(APawn* Anchor
 		VehicleMovement->SetDragCoefficient(0.18f);
 		VehicleMovement->SetDownforceCoefficient(4.2f);
 		VehicleMovement->ResetVehicle();
+		VehicleMovement->SetRequiresControllerForInputs(false);
+		VehicleMovement->SetSleeping(false);
+		VehicleMovement->SetParked(false);
+		VehicleMovement->SetUseAutomaticGears(true);
+		VehicleMovement->SetTargetGear(1, true);
 	}
 
 	bConfiguredPrototypeVehicleHandling = true;
@@ -502,7 +507,7 @@ void UUBPowerPrototypeSubsystem::BuildImportedDriftTrackGameplayRoute(APawn* Anc
 	const FVector StartGroundPoint = FVector(PrototypeRaceWaypoints[0].X, PrototypeRaceWaypoints[0].Y, PrototypeRaceWaypoints[0].Z);
 	const FVector NextGroundPoint = PrototypeRaceWaypoints[1];
 	const FVector StartDirection = (NextGroundPoint - StartGroundPoint).GetSafeNormal2D();
-	PrototypeTrackStartLocation = ProjectPointToTrackSurface(StartGroundPoint - StartDirection * 240.0f, AnchorPawn, 155.0f);
+	PrototypeTrackStartLocation = ProjectPointToTrackSurface(StartGroundPoint - StartDirection * 240.0f, AnchorPawn, 24.0f);
 	PrototypeTrackStartRotation = StartDirection.Rotation();
 
 	for (int32 Index = 0; Index < PrototypeRaceWaypoints.Num(); ++Index)
@@ -736,7 +741,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTrack(APawn* AnchorPawn)
 	const FVector StartDirection = (StartNext - StartLocation).GetSafeNormal2D();
 	const FVector StartRight = FVector::CrossProduct(FVector::UpVector, StartDirection).GetSafeNormal();
 	const FRotator StartRotation = StartDirection.Rotation();
-	PrototypeTrackStartLocation = StartLocation + StartDirection * 650.0f + FVector::UpVector * 165.0f;
+	PrototypeTrackStartLocation = StartLocation + StartDirection * 650.0f + FVector::UpVector * 24.0f;
 	PrototypeTrackStartRotation = StartRotation;
 	bHasPrototypeTrackStart = true;
 
@@ -862,6 +867,18 @@ void UUBPowerPrototypeSubsystem::MovePawnToPrototypeTrackStart(APawn* AnchorPawn
 	}
 
 	AnchorPawn->SetActorLocationAndRotation(PrototypeTrackStartLocation, PrototypeTrackStartRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(AnchorPawn->GetRootComponent()))
+	{
+		if (RootPrimitive->IsSimulatingPhysics())
+		{
+			RootPrimitive->WakeAllRigidBodies();
+		}
+	}
+	if (UChaosWheeledVehicleMovementComponent* VehicleMovement = AnchorPawn->FindComponentByClass<UChaosWheeledVehicleMovementComponent>())
+	{
+		VehicleMovement->SetSleeping(false);
+		VehicleMovement->SetParked(false);
+	}
 	AnchorPawn->ForceNetUpdate();
 }
 
