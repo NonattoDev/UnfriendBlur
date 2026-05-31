@@ -34,6 +34,20 @@ AUBPrototypeTargetCar::AUBPrototypeTargetCar()
 	CarMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	CarMesh->SetGenerateOverlapEvents(false);
 
+	GlassMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GlassMesh"));
+	GlassMesh->SetupAttachment(Collision);
+	GlassMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GlassMesh->SetGenerateOverlapEvents(false);
+
+	FrontLeftWheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FrontLeftWheelMesh"));
+	FrontLeftWheelMesh->SetupAttachment(Collision);
+	FrontRightWheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FrontRightWheelMesh"));
+	FrontRightWheelMesh->SetupAttachment(Collision);
+	RearLeftWheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RearLeftWheelMesh"));
+	RearLeftWheelMesh->SetupAttachment(Collision);
+	RearRightWheelMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RearRightWheelMesh"));
+	RearRightWheelMesh->SetupAttachment(Collision);
+
 	MarkerLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("MarkerLight"));
 	MarkerLight->SetupAttachment(Collision);
 	MarkerLight->SetRelativeLocation(FVector(0.0f, 0.0f, 130.0f));
@@ -49,6 +63,21 @@ AUBPrototypeTargetCar::AUBPrototypeTargetCar()
 	if (SportsCarMesh.Succeeded())
 	{
 		CarMesh->SetStaticMesh(SportsCarMesh.Object);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SportsCarGlassMesh(TEXT("/Game/Vehicles/SportsCar/SM_SportsCar_Glass.SM_SportsCar_Glass"));
+	if (SportsCarGlassMesh.Succeeded())
+	{
+		GlassMesh->SetStaticMesh(SportsCarGlassMesh.Object);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SportsCarWheelMesh(TEXT("/Game/Vehicles/SportsCar/SM_SportsCar_Wheel.SM_SportsCar_Wheel"));
+	if (SportsCarWheelMesh.Succeeded())
+	{
+		ConfigureWheelMesh(FrontLeftWheelMesh, SportsCarWheelMesh.Object, FVector(146.0f, -102.0f, -34.0f), false);
+		ConfigureWheelMesh(FrontRightWheelMesh, SportsCarWheelMesh.Object, FVector(146.0f, 102.0f, -34.0f), true);
+		ConfigureWheelMesh(RearLeftWheelMesh, SportsCarWheelMesh.Object, FVector(-150.0f, -102.0f, -34.0f), false);
+		ConfigureWheelMesh(RearRightWheelMesh, SportsCarWheelMesh.Object, FVector(-150.0f, 102.0f, -34.0f), true);
 	}
 
 	AutoPossessAI = EAutoPossessAI::Disabled;
@@ -83,6 +112,7 @@ void AUBPrototypeTargetCar::Tick(float DeltaSeconds)
 	const FVector Velocity = Collision->GetPhysicsLinearVelocity();
 	const FVector HorizontalVelocity(Velocity.X, Velocity.Y, 0.0f);
 	const FVector AngularVelocity = Collision->GetPhysicsAngularVelocityInRadians();
+	UpdateWheelVisuals(DeltaSeconds, HorizontalVelocity);
 	if (Velocity.Z > 720.0f || AngularVelocity.Size() > 5.8f)
 	{
 		ImpactRecoveryTimeRemaining = FMath::Max(ImpactRecoveryTimeRemaining, ImpactRecoveryHoldSeconds);
@@ -201,4 +231,39 @@ void AUBPrototypeTargetCar::AdvanceWaypointIfNeeded()
 
 		CurrentWaypointIndex = (CurrentWaypointIndex + 1) % DrivingWaypoints.Num();
 	}
+}
+
+void AUBPrototypeTargetCar::ConfigureWheelMesh(UStaticMeshComponent* WheelComponent, UStaticMesh* WheelMesh, const FVector& RelativeLocation, bool bRightSide)
+{
+	if (!WheelComponent || !WheelMesh)
+	{
+		return;
+	}
+
+	WheelComponent->SetStaticMesh(WheelMesh);
+	WheelComponent->SetRelativeLocation(RelativeLocation);
+	WheelComponent->SetRelativeRotation(FRotator(0.0f, bRightSide ? 180.0f : 0.0f, 0.0f));
+	WheelComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WheelComponent->SetGenerateOverlapEvents(false);
+}
+
+void AUBPrototypeTargetCar::UpdateWheelVisuals(float DeltaSeconds, const FVector& HorizontalVelocity)
+{
+	const float ForwardSpeed = FVector::DotProduct(HorizontalVelocity, GetActorForwardVector());
+	WheelSpinDegrees = FMath::Fmod(WheelSpinDegrees + ForwardSpeed * DeltaSeconds * 1.2f, 360.0f);
+
+	const auto ApplyWheelRotation = [this](UStaticMeshComponent* WheelComponent, bool bRightSide)
+	{
+		if (!WheelComponent)
+		{
+			return;
+		}
+
+		WheelComponent->SetRelativeRotation(FRotator(WheelSpinDegrees, bRightSide ? 180.0f : 0.0f, 0.0f));
+	};
+
+	ApplyWheelRotation(FrontLeftWheelMesh, false);
+	ApplyWheelRotation(FrontRightWheelMesh, true);
+	ApplyWheelRotation(RearLeftWheelMesh, false);
+	ApplyWheelRotation(RearRightWheelMesh, true);
 }

@@ -495,7 +495,22 @@ void UUBPowerPrototypeSubsystem::BuildImportedDriftTrackGameplayRoute(APawn* Anc
 		return true;
 	};
 
-	const float TargetDistances[] = { 1900.0f, 3400.0f, 5200.0f, 7400.0f, 9700.0f, 12300.0f };
+	const float TargetDistances[] =
+	{
+		850.0f,
+		1350.0f,
+		2050.0f,
+		2900.0f,
+		3950.0f,
+		5200.0f,
+		6600.0f,
+		8200.0f,
+		10000.0f,
+		12100.0f,
+		14500.0f,
+		17200.0f
+	};
+	const float TargetLaneOffsets[] = { -260.0f, 260.0f, 0.0f, -120.0f, 120.0f };
 	for (int32 Index = 0; Index < UE_ARRAY_COUNT(TargetDistances); ++Index)
 	{
 		FVector RouteLocation = FVector::ZeroVector;
@@ -506,8 +521,8 @@ void UUBPowerPrototypeSubsystem::BuildImportedDriftTrackGameplayRoute(APawn* Anc
 		}
 
 		const FVector Right = FVector::CrossProduct(FVector::UpVector, Direction).GetSafeNormal();
-		const float LaneOffset = Index % 2 == 0 ? -230.0f : 230.0f;
-		const FVector TargetLocation = ProjectPointToTrackSurface(RouteLocation + Right * LaneOffset, AnchorPawn, 88.0f);
+		const float LaneOffset = TargetLaneOffsets[Index % UE_ARRAY_COUNT(TargetLaneOffsets)];
+		const FVector TargetLocation = ProjectPointToTrackSurface(RouteLocation + Right * LaneOffset, AnchorPawn, 64.0f);
 		PrototypeTargetTransforms.Add(FTransform(Direction.Rotation(), TargetLocation, FVector::OneVector));
 	}
 }
@@ -542,8 +557,8 @@ void UUBPowerPrototypeSubsystem::AddImportedTrackGameplayPoints(const FVector& S
 	}
 
 	const FVector Right = FVector::CrossProduct(FVector::UpVector, Direction).GetSafeNormal();
-	const float LateralPattern[] = { -285.0f, 0.0f, 285.0f, -145.0f, 145.0f };
-	const float AlphaPattern[] = { 0.10f, 0.28f, 0.46f, 0.64f, 0.82f };
+	const float LateralPattern[] = { -330.0f, -165.0f, 0.0f, 165.0f, 330.0f, -250.0f, 250.0f, -85.0f, 85.0f, 0.0f, -300.0f, 300.0f };
+	const float AlphaPattern[] = { 0.08f, 0.16f, 0.24f, 0.32f, 0.40f, 0.50f, 0.60f, 0.70f, 0.78f, 0.86f, 0.92f, 0.97f };
 	for (int32 PickupIndex = 0; PickupIndex < UE_ARRAY_COUNT(AlphaPattern); ++PickupIndex)
 	{
 		const float Alpha = AlphaPattern[PickupIndex];
@@ -756,19 +771,19 @@ void UUBPowerPrototypeSubsystem::AddTrackGameplayPoints(const FVector& SegmentSt
 {
 	const FVector Direction = (SegmentEnd - SegmentStart).GetSafeNormal2D();
 	const FRotator TargetRotation = Direction.Rotation();
-	const float LateralPattern[4] = { -420.0f, 0.0f, 420.0f, -120.0f };
+	const float LateralPattern[6] = { -470.0f, -235.0f, 0.0f, 235.0f, 470.0f, 120.0f };
 
-	for (int32 PickupIndex = 0; PickupIndex < 4; ++PickupIndex)
+	for (int32 PickupIndex = 0; PickupIndex < 6; ++PickupIndex)
 	{
-		const float Alpha = 0.18f + static_cast<float>(PickupIndex) * 0.2f;
+		const float Alpha = 0.12f + static_cast<float>(PickupIndex) * 0.145f;
 		const float Lateral = LateralPattern[(PickupIndex + SegmentIndex) % UE_ARRAY_COUNT(LateralPattern)];
 		PrototypePickupLocations.Add(FMath::Lerp(SegmentStart, SegmentEnd, Alpha) + Right * Lateral + FVector::UpVector * 62.0f);
 	}
 
-	if (SegmentIndex >= 1 && SegmentIndex % 2 == 1)
+	if (SegmentIndex >= 1)
 	{
-		const float Lateral = SegmentIndex % 4 == 1 ? -280.0f : 310.0f;
-		const FVector TargetLocation = FMath::Lerp(SegmentStart, SegmentEnd, 0.58f) + Right * Lateral + FVector::UpVector * 84.0f;
+		const float Lateral = SegmentIndex % 3 == 0 ? 0.0f : (SegmentIndex % 2 == 0 ? -280.0f : 310.0f);
+		const FVector TargetLocation = FMath::Lerp(SegmentStart, SegmentEnd, 0.58f) + Right * Lateral + FVector::UpVector * 64.0f;
 		PrototypeTargetTransforms.Add(FTransform(TargetRotation, TargetLocation, FVector::OneVector));
 	}
 }
@@ -883,7 +898,7 @@ void UUBPowerPrototypeSubsystem::SpawnPrototypeTargets(APawn* AnchorPawn)
 
 	bSpawnedPrototypeTargets = true;
 
-	const int32 TargetCount = PrototypeTargetTransforms.Num() > 0 ? PrototypeTargetTransforms.Num() : 2;
+	const int32 TargetCount = PrototypeTargetTransforms.Num() > 0 ? PrototypeTargetTransforms.Num() : 8;
 	for (int32 Index = 0; Index < TargetCount; ++Index)
 	{
 		const FTransform SpawnTransform = FindTargetCarTransform(AnchorPawn, Index);
@@ -927,10 +942,10 @@ FTransform UUBPowerPrototypeSubsystem::FindTargetCarTransform(APawn* AnchorPawn,
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UBPrototypeTargetGroundTrace), false, AnchorPawn);
 	if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
 	{
-		return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Hit.Location + FVector::UpVector * 84.0f, FVector::OneVector);
+		return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Hit.Location + FVector::UpVector * 64.0f, FVector::OneVector);
 	}
 
-	return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Candidate + FVector::UpVector * 84.0f, FVector::OneVector);
+	return FTransform(FRotator(0.0f, AnchorPawn->GetActorRotation().Yaw, 0.0f), Candidate + FVector::UpVector * 64.0f, FVector::OneVector);
 }
 
 EUBPowerType UUBPowerPrototypeSubsystem::PickRandomPower() const

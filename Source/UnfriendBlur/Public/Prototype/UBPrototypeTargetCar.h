@@ -6,6 +6,7 @@
 
 class UBoxComponent;
 class UPointLightComponent;
+class UStaticMesh;
 class UStaticMeshComponent;
 class UUBPowerInventoryComponent;
 class UUBVehicleHealthComponent;
@@ -33,6 +34,21 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
 	TObjectPtr<UStaticMeshComponent> CarMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UStaticMeshComponent> GlassMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UStaticMeshComponent> FrontLeftWheelMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UStaticMeshComponent> FrontRightWheelMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UStaticMeshComponent> RearLeftWheelMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
+	TObjectPtr<UStaticMeshComponent> RearRightWheelMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UnfriendBlur|Prototype")
 	TObjectPtr<UPointLightComponent> MarkerLight;
@@ -71,7 +87,10 @@ protected:
 	int32 CurrentWaypointIndex = 0;
 	float LowSpeedSeconds = 0.0f;
 	float ImpactRecoveryTimeRemaining = 0.0f;
+	float WheelSpinDegrees = 0.0f;
 
 	int32 FindClosestWaypointIndex() const;
 	void AdvanceWaypointIfNeeded();
+	void ConfigureWheelMesh(UStaticMeshComponent* WheelComponent, UStaticMesh* WheelMesh, const FVector& RelativeLocation, bool bRightSide);
+	void UpdateWheelVisuals(float DeltaSeconds, const FVector& HorizontalVelocity);
 };
