@@ -17,6 +17,7 @@ O componente `UUBArcadeVehicleAssistComponent` voltou a ser adicionado automatic
 - enquanto o Blueprint do carro nao responde bem sozinho, existe um fallback fisico controlado para aceleracao e curva;
 - qualquer assist fisico precisa ter limite de velocidade/forca para nao explodir a simulacao;
 - o spawn do carro no prototipo usa clearance baixo para nao comecar caindo/flutuando;
+- o carro so e considerado apoiado quando esta perto do solo; ver o chao a distancia nao basta;
 - toda rodada de teste do jogador local grava telemetria em `Saved/HandlingTelemetry.csv`.
 
 O prototipo tambem mostra uma linha amarela `Vehicle debug` durante o Play. Ela serve para diagnostico rapido do input e do estado do carro.
@@ -89,6 +90,7 @@ Regra daqui para frente:
 - Grip lateral normal para impedir que o carro continue atravessado quando nao esta em drift.
 - Damping/cap de yaw para impedir o carro de continuar girando depois que o jogador solta A/D.
 - Clamp de velocidade planar, lateral e vertical somente quando o carro passa dos limites de seguranca.
+- Limitador especifico de velocidade no ar para impedir o carro de virar missil depois de uma lombada/borda.
 - `Space` aciona handbrake diretamente no Chaos Vehicle.
 - Telemetria de handling para comparar ajuste por ajuste.
 - `Shift` fica livre para virar olhar para tras quando conectarmos a camera/input final.

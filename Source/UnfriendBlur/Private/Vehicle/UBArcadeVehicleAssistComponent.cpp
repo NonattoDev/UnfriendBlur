@@ -89,7 +89,7 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	{
 		ApplyYawStabilityAssist(Primitive, DeltaTime);
 	}
-	ApplyVelocitySafetyClamp(Primitive);
+	ApplyVelocitySafetyClamp(Primitive, DeltaTime, bGrounded);
 	RecordTelemetry(DeltaTime, Primitive, bGrounded, GroundDistance);
 
 	bWasGrounded = bGrounded;
@@ -208,7 +208,7 @@ bool UUBArcadeVehicleAssistComponent::IsGrounded(float& OutGroundDistance) const
 		OutGroundDistance = Hit.Distance;
 	}
 
-	return bHitGround;
+	return bHitGround && OutGroundDistance <= GroundedMaxDistance;
 }
 
 float UUBArcadeVehicleAssistComponent::GetSteeringInput() const
@@ -489,7 +489,7 @@ void UUBArcadeVehicleAssistComponent::ApplyYawStabilityAssist(UPrimitiveComponen
 	Primitive->SetPhysicsAngularVelocityInRadians(RollPitchVelocity + FVector::UpVector * StabilizedYawRate, false);
 }
 
-void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive) const
+void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const
 {
 	const AActor* OwnerActor = GetOwner();
 	if (!Primitive || !OwnerActor)
@@ -499,10 +499,17 @@ void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveCompone
 
 	FVector Velocity = Primitive->GetPhysicsLinearVelocity();
 	FVector HorizontalVelocity(Velocity.X, Velocity.Y, 0.0f);
-	const float HorizontalSpeed = HorizontalVelocity.Size();
-	if (HorizontalSpeed > MaxPlanarSpeed)
+	if (!bGrounded)
 	{
-		HorizontalVelocity = HorizontalVelocity.GetSafeNormal() * MaxPlanarSpeed;
+		const float FrameDamping = FMath::Pow(AirPlanarDamping, FMath::Max(DeltaTime, 0.0f) * 60.0f);
+		HorizontalVelocity *= FrameDamping;
+	}
+
+	const float HorizontalSpeed = HorizontalVelocity.Size();
+	const float PlanarSpeedLimit = bGrounded ? MaxPlanarSpeed : MaxAirPlanarSpeed;
+	if (HorizontalSpeed > PlanarSpeedLimit)
+	{
+		HorizontalVelocity = HorizontalVelocity.GetSafeNormal() * PlanarSpeedLimit;
 	}
 
 	const FVector Forward = OwnerActor->GetActorForwardVector().GetSafeNormal2D();

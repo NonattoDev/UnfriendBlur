@@ -64,7 +64,7 @@ public:
 	float MaxDownforceAcceleration = 2600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float AirDownforceAcceleration = 1800.0f;
+	float AirDownforceAcceleration = 260.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Stability")
 	float RollPitchAngularDamping = 0.92f;
@@ -80,6 +80,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
 	float GroundProbeDistance = 340.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
+	float GroundedMaxDistance = 118.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
 	float MaxNearGroundUpVelocity = 360.0f;
@@ -127,7 +130,10 @@ public:
 	float MaxDriftYawRateDegrees = 150.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
-	float MaxPlanarSpeed = 9000.0f;
+	float MaxPlanarSpeed = 6200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float MaxAirPlanarSpeed = 4300.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
 	float MaxNormalSideSpeed = 1180.0f;
@@ -136,7 +142,10 @@ public:
 	float MaxDriftSideSpeed = 2850.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
-	float MaxDownVelocity = 3600.0f;
+	float MaxDownVelocity = 1650.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float AirPlanarDamping = 0.975f;
 
 	UFUNCTION(BlueprintCallable, Category = "UnfriendBlur|Vehicle Assist")
 	void SetAssistEnabled(bool bEnabled);
@@ -176,7 +185,7 @@ private:
 	void ApplySteeringAndDriftAssist(UPrimitiveComponent* Primitive, float DeltaTime, float Speed) const;
 	void ApplyNormalGripAssist(UPrimitiveComponent* Primitive, float DeltaTime) const;
 	void ApplyYawStabilityAssist(UPrimitiveComponent* Primitive, float DeltaTime) const;
-	void ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive) const;
+	void ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const;
 	bool ShouldRecordTelemetry() const;
 	void InitializeTelemetry();
 	void RecordTelemetry(float DeltaTime, UPrimitiveComponent* Primitive, bool bGrounded, float GroundDistance);
