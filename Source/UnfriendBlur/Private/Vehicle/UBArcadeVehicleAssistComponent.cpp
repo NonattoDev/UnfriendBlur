@@ -4,7 +4,10 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/FileManager.h"
 #include "InputCoreTypes.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 UUBArcadeVehicleAssistComponent::UUBArcadeVehicleAssistComponent()
 {
@@ -60,6 +63,8 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	ApplyArcadeSteering(Primitive, DeltaTime, Speed, bGrounded);
 	ApplySteeringAndDriftAssist(Primitive, DeltaTime, Speed);
 	ApplyNormalGripAssist(Primitive, DeltaTime);
+	ApplyVelocitySafetyClamp(Primitive);
+	RecordTelemetry(DeltaTime, Primitive, bGrounded, GroundDistance);
 
 	bWasGrounded = bGrounded;
 }
@@ -77,6 +82,8 @@ void UUBArcadeVehicleAssistComponent::SetAssistEnabled(bool bEnabled)
 		{
 			CachedPrimitive->WakeAllRigidBodies();
 		}
+
+		InitializeTelemetry();
 	}
 }
 
@@ -346,10 +353,6 @@ void UUBArcadeVehicleAssistComponent::ApplyArcadeSteering(UPrimitiveComponent* P
 	const FVector TurnedHorizontalVelocity = HorizontalVelocity.RotateAngleAxis(TurnDegrees * ArcadeSteeringVelocityTurnBlend, FVector::UpVector);
 	Primitive->SetPhysicsLinearVelocity(FVector(TurnedHorizontalVelocity.X, TurnedHorizontalVelocity.Y, Velocity.Z), false);
 
-	const FRotator CurrentRotation = OwnerActor->GetActorRotation();
-	const FRotator TargetRotation(0.0f, CurrentRotation.Yaw + TurnDegrees, 0.0f);
-	const_cast<AActor*>(OwnerActor)->SetActorRotation(TargetRotation, ETeleportType::TeleportPhysics);
-
 	const FVector AngularVelocity = Primitive->GetPhysicsAngularVelocityInRadians();
 	const float TargetYawVelocity = FMath::DegreesToRadians(Steering * ForwardSpeedSign * ArcadeSteeringTurnRateDegrees * SpeedAlpha);
 	const FVector RollPitchVelocity = AngularVelocity - FVector::UpVector * FVector::DotProduct(AngularVelocity, FVector::UpVector);
@@ -381,9 +384,11 @@ void UUBArcadeVehicleAssistComponent::ApplySteeringAndDriftAssist(UPrimitiveComp
 	const float DriftTurnDegrees = Steering * DriftYawRateDegrees * SpeedAlpha * DeltaTime;
 	const FVector DriftedHorizontalVelocity = HorizontalVelocity.RotateAngleAxis(DriftTurnDegrees * DriftVelocityTurnBlend, FVector::UpVector);
 
-	const FRotator CurrentRotation = OwnerActor->GetActorRotation();
-	const_cast<AActor*>(OwnerActor)->SetActorRotation(FRotator(0.0f, CurrentRotation.Yaw + DriftTurnDegrees, 0.0f), ETeleportType::TeleportPhysics);
 	Primitive->SetPhysicsLinearVelocity(FVector(DriftedHorizontalVelocity.X, DriftedHorizontalVelocity.Y, Velocity.Z), false);
+	const FVector AngularVelocity = Primitive->GetPhysicsAngularVelocityInRadians();
+	const FVector RollPitchVelocity = AngularVelocity - FVector::UpVector * FVector::DotProduct(AngularVelocity, FVector::UpVector);
+	const float TargetYawVelocity = FMath::DegreesToRadians(Steering * DriftYawRateDegrees * SpeedAlpha);
+	Primitive->SetPhysicsAngularVelocityInRadians(RollPitchVelocity + FVector::UpVector * TargetYawVelocity, false);
 	Primitive->AddTorqueInRadians(FVector::UpVector * Steering * DriftYawTorque, NAME_None, true);
 	Primitive->AddForce(OwnerActor->GetActorRightVector() * Steering * Primitive->GetMass() * DriftSideAcceleration * SpeedAlpha, NAME_None, false);
 }
@@ -405,6 +410,33 @@ void UUBArcadeVehicleAssistComponent::ApplyNormalGripAssist(UPrimitiveComponent*
 	const float FrameDamping = FMath::Pow(NormalGripLateralDamping, FMath::Max(DeltaTime, 0.0f) * 60.0f);
 	const FVector StabilizedVelocity = Forward * ForwardSpeed + Right * SideSpeed * FrameDamping + VerticalVelocity;
 	Primitive->SetPhysicsLinearVelocity(StabilizedVelocity, false);
+}
+
+void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive) const
+{
+	const AActor* OwnerActor = GetOwner();
+	if (!Primitive || !OwnerActor)
+	{
+		return;
+	}
+
+	FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	FVector HorizontalVelocity(Velocity.X, Velocity.Y, 0.0f);
+	const float HorizontalSpeed = HorizontalVelocity.Size();
+	if (HorizontalSpeed > MaxPlanarSpeed)
+	{
+		HorizontalVelocity = HorizontalVelocity.GetSafeNormal() * MaxPlanarSpeed;
+	}
+
+	const FVector Forward = OwnerActor->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Right = OwnerActor->GetActorRightVector().GetSafeNormal2D();
+	const float ForwardSpeed = FVector::DotProduct(HorizontalVelocity, Forward);
+	const float SideSpeed = FVector::DotProduct(HorizontalVelocity, Right);
+	const float SideSpeedLimit = IsDriftInputDown() ? MaxDriftSideSpeed : MaxNormalSideSpeed;
+	const float ClampedSideSpeed = FMath::Clamp(SideSpeed, -SideSpeedLimit, SideSpeedLimit);
+	const float ClampedUpSpeed = FMath::Clamp(Velocity.Z, -MaxDownVelocity, MaxNearGroundUpVelocity);
+
+	Primitive->SetPhysicsLinearVelocity(Forward * ForwardSpeed + Right * ClampedSideSpeed + FVector::UpVector * ClampedUpSpeed, false);
 }
 
 void UUBArcadeVehicleAssistComponent::HandleOwnerComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -433,4 +465,102 @@ void UUBArcadeVehicleAssistComponent::HandleOwnerComponentHit(UPrimitiveComponen
 
 	HitComponent->SetPhysicsLinearVelocity(Velocity, false);
 	HitComponent->SetPhysicsAngularVelocityInRadians(HitComponent->GetPhysicsAngularVelocityInRadians() * 0.78f, false);
+}
+
+bool UUBArcadeVehicleAssistComponent::ShouldRecordTelemetry() const
+{
+	if (!bTelemetryEnabled)
+	{
+		return false;
+	}
+
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	const APlayerController* PlayerController = OwnerPawn ? Cast<APlayerController>(OwnerPawn->GetController()) : nullptr;
+	return PlayerController && PlayerController->IsLocalController();
+}
+
+void UUBArcadeVehicleAssistComponent::InitializeTelemetry()
+{
+	if (bTelemetryInitialized || !ShouldRecordTelemetry())
+	{
+		return;
+	}
+
+	TelemetryFilePath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("HandlingTelemetry.csv"));
+	const FString Header = TEXT("time,actor,speed_kmh,forward_speed_kmh,side_speed_kmh,steering,throttle,brake,drift,grounded,ground_distance,slip_angle_deg,yaw_rate_deg_s,roll_deg,pitch_deg,up_velocity\n");
+	FFileHelper::SaveStringToFile(Header, *TelemetryFilePath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get());
+	bTelemetryInitialized = true;
+	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Vehicle] Handling telemetry recording to %s"), *TelemetryFilePath);
+}
+
+void UUBArcadeVehicleAssistComponent::RecordTelemetry(float DeltaTime, UPrimitiveComponent* Primitive, bool bGrounded, float GroundDistance)
+{
+	if (!Primitive || !ShouldRecordTelemetry())
+	{
+		return;
+	}
+
+	InitializeTelemetry();
+	if (TelemetryFilePath.IsEmpty())
+	{
+		return;
+	}
+
+	TelemetryAccumulator += DeltaTime;
+	if (TelemetryAccumulator < FMath::Max(0.02f, TelemetrySampleInterval))
+	{
+		return;
+	}
+	TelemetryAccumulator = 0.0f;
+
+	const AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	const FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	const FVector HorizontalVelocity(Velocity.X, Velocity.Y, 0.0f);
+	const FVector Forward = OwnerActor->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Right = OwnerActor->GetActorRightVector().GetSafeNormal2D();
+	const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
+	const float SideSpeed = FVector::DotProduct(Velocity, Right);
+	const float SpeedKmh = HorizontalVelocity.Size() * 0.036f;
+	const float ForwardSpeedKmh = ForwardSpeed * 0.036f;
+	const float SideSpeedKmh = SideSpeed * 0.036f;
+	const float SlipAngleDegrees = HorizontalVelocity.SizeSquared2D() > FMath::Square(20.0f)
+		? FMath::RadiansToDegrees(FMath::Atan2(SideSpeed, FMath::Abs(ForwardSpeed)))
+		: 0.0f;
+	const FRotator Rotation = OwnerActor->GetActorRotation();
+	const float TimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	float ActorYawRateDegrees = 0.0f;
+	if (bHasTelemetryYawSample)
+	{
+		const float TimeDelta = FMath::Max(TimeSeconds - LastTelemetryTimeSeconds, KINDA_SMALL_NUMBER);
+		ActorYawRateDegrees = FMath::FindDeltaAngleDegrees(LastTelemetryYawDegrees, Rotation.Yaw) / TimeDelta;
+	}
+	LastTelemetryTimeSeconds = TimeSeconds;
+	LastTelemetryYawDegrees = Rotation.Yaw;
+	bHasTelemetryYawSample = true;
+
+	const FString Row = FString::Printf(
+		TEXT("%.3f,%s,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n"),
+		TimeSeconds,
+		*OwnerActor->GetName(),
+		SpeedKmh,
+		ForwardSpeedKmh,
+		SideSpeedKmh,
+		GetSteeringInput(),
+		GetThrottleInput(),
+		GetBrakeInput(),
+		IsDriftInputDown() ? 1 : 0,
+		bGrounded ? 1 : 0,
+		GroundDistance,
+		SlipAngleDegrees,
+		ActorYawRateDegrees,
+		Rotation.Roll,
+		Rotation.Pitch,
+		Velocity.Z);
+
+	FFileHelper::SaveStringToFile(Row, *TelemetryFilePath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), EFileWrite::FILEWRITE_Append);
 }

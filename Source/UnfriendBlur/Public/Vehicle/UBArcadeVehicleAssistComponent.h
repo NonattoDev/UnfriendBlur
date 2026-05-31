@@ -20,26 +20,32 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist")
 	bool bAssistEnabled = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
-	float ThrottleAssistAcceleration = 1800.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Telemetry")
+	bool bTelemetryEnabled = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Telemetry")
+	float TelemetrySampleInterval = 0.10f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
-	float BrakeAssistAcceleration = 6200.0f;
+	float ThrottleAssistAcceleration = 1150.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
-	float AssistMaxForwardSpeed = 7200.0f;
+	float BrakeAssistAcceleration = 5200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
+	float AssistMaxForwardSpeed = 6800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float BaseDownforceAcceleration = 720.0f;
+	float BaseDownforceAcceleration = 420.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float SpeedDownforceCoefficient = 0.00018f;
+	float SpeedDownforceCoefficient = 0.00007f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float MaxDownforceAcceleration = 4800.0f;
+	float MaxDownforceAcceleration = 2600.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float AirDownforceAcceleration = 6800.0f;
+	float AirDownforceAcceleration = 1800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Stability")
 	float RollPitchAngularDamping = 0.92f;
@@ -66,7 +72,7 @@ public:
 	float ArcadeSteeringMinSpeed = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
-	float ArcadeSteeringTurnRateDegrees = 152.0f;
+	float ArcadeSteeringTurnRateDegrees = 122.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
 	float ArcadeSteeringVelocityTurnBlend = 0.74f;
@@ -75,19 +81,31 @@ public:
 	float DriftMinSpeed = 850.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftYawRateDegrees = 168.0f;
+	float DriftYawRateDegrees = 132.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftYawTorque = 9200.0f;
+	float DriftYawTorque = 4200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftSideAcceleration = 620.0f;
+	float DriftSideAcceleration = 240.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
 	float DriftVelocityTurnBlend = 0.28f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Grip")
-	float NormalGripLateralDamping = 0.935f;
+	float NormalGripLateralDamping = 0.956f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float MaxPlanarSpeed = 9000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float MaxNormalSideSpeed = 2200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float MaxDriftSideSpeed = 3800.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Safety")
+	float MaxDownVelocity = 3600.0f;
 
 	UFUNCTION(BlueprintCallable, Category = "UnfriendBlur|Vehicle Assist")
 	void SetAssistEnabled(bool bEnabled);
@@ -100,6 +118,12 @@ private:
 	TObjectPtr<UPrimitiveComponent> CachedPrimitive;
 
 	bool bWasGrounded = false;
+	bool bTelemetryInitialized = false;
+	bool bHasTelemetryYawSample = false;
+	float TelemetryAccumulator = 0.0f;
+	float LastTelemetryTimeSeconds = 0.0f;
+	float LastTelemetryYawDegrees = 0.0f;
+	FString TelemetryFilePath;
 
 	UPrimitiveComponent* FindBestPrimitive() const;
 	bool IsGrounded(float& OutGroundDistance) const;
@@ -115,6 +139,10 @@ private:
 	void ApplyArcadeSteering(UPrimitiveComponent* Primitive, float DeltaTime, float Speed, bool bGrounded) const;
 	void ApplySteeringAndDriftAssist(UPrimitiveComponent* Primitive, float DeltaTime, float Speed) const;
 	void ApplyNormalGripAssist(UPrimitiveComponent* Primitive, float DeltaTime) const;
+	void ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive) const;
+	bool ShouldRecordTelemetry() const;
+	void InitializeTelemetry();
+	void RecordTelemetry(float DeltaTime, UPrimitiveComponent* Primitive, bool bGrounded, float GroundDistance);
 
 	UFUNCTION()
 	void HandleOwnerComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
