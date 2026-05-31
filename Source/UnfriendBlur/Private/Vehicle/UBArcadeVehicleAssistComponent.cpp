@@ -73,6 +73,7 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	ApplyDownforce(Primitive, Speed, bGrounded);
 	ApplyAntiFlipStability(Primitive, bGrounded);
 	ApplyCurbLaunchClamp(Primitive, bGrounded, GroundDistance);
+	ApplyGroundSettleAssist(Primitive, GroundDistance);
 	if (bEnableArcadeSteeringAssist)
 	{
 		ApplyArcadeSteering(Primitive, DeltaTime, Speed, bGrounded);
@@ -275,7 +276,8 @@ bool UUBArcadeVehicleAssistComponent::IsDriftInputDown() const
 {
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	const APlayerController* PlayerController = OwnerPawn ? Cast<APlayerController>(OwnerPawn->GetController()) : nullptr;
-	return PlayerController
+	return bUseSpaceForDriftInput
+		&& PlayerController
 		&& PlayerController->IsLocalController()
 		&& PlayerController->IsInputKeyDown(EKeys::SpaceBar);
 }
@@ -293,7 +295,7 @@ void UUBArcadeVehicleAssistComponent::ApplyChaosVehicleInput(UChaosVehicleMoveme
 	VehicleMovement->SetThrottleInput(GetThrottleInput());
 	VehicleMovement->SetBrakeInput(GetBrakeInput());
 	VehicleMovement->SetSteeringInput(GetSteeringInput());
-	VehicleMovement->SetHandbrakeInput(IsDriftInputDown());
+	VehicleMovement->SetHandbrakeInput(bUseChaosHandbrakeInput && IsDriftInputDown());
 }
 
 void UUBArcadeVehicleAssistComponent::ApplyThrottleBrakeAssist(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const
@@ -375,6 +377,24 @@ void UUBArcadeVehicleAssistComponent::ApplyCurbLaunchClamp(UPrimitiveComponent* 
 	{
 		Velocity.Z = MaxNearGroundUpVelocity;
 		Primitive->SetPhysicsLinearVelocity(Velocity, false);
+	}
+}
+
+void UUBArcadeVehicleAssistComponent::ApplyGroundSettleAssist(UPrimitiveComponent* Primitive, float GroundDistance) const
+{
+	if (!Primitive || GroundDistance <= RestingGroundDistance || GroundDistance > GroundSettleMaxDistance)
+	{
+		return;
+	}
+
+	FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	const float ErrorAlpha = FMath::Clamp((GroundDistance - RestingGroundDistance) / FMath::Max(GroundSettleMaxDistance - RestingGroundDistance, 1.0f), 0.0f, 1.0f);
+	const float TargetDownVelocity = -FMath::Lerp(55.0f, GroundSettleMaxDownVelocity, ErrorAlpha);
+	if (Velocity.Z > TargetDownVelocity)
+	{
+		Velocity.Z = TargetDownVelocity;
+		Primitive->SetPhysicsLinearVelocity(Velocity, false);
+		Primitive->WakeAllRigidBodies();
 	}
 }
 

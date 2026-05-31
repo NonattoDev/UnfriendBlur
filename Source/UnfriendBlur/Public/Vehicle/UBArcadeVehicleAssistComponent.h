@@ -25,6 +25,12 @@ public:
 	bool bDriveChaosVehicleInput = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Input")
+	bool bUseSpaceForDriftInput = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Input")
+	bool bUseChaosHandbrakeInput = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Input")
 	bool bEnablePhysicsThrottleFallback = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
@@ -83,6 +89,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
 	float GroundedMaxDistance = 118.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
+	float RestingGroundDistance = 54.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
+	float GroundSettleMaxDistance = 96.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
+	float GroundSettleMaxDownVelocity = 280.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
 	float MaxNearGroundUpVelocity = 360.0f;
@@ -181,6 +196,7 @@ private:
 	void ApplyDownforce(UPrimitiveComponent* Primitive, float Speed, bool bGrounded) const;
 	void ApplyAntiFlipStability(UPrimitiveComponent* Primitive, bool bGrounded) const;
 	void ApplyCurbLaunchClamp(UPrimitiveComponent* Primitive, bool bGrounded, float GroundDistance) const;
+	void ApplyGroundSettleAssist(UPrimitiveComponent* Primitive, float GroundDistance) const;
 	void ApplyArcadeSteering(UPrimitiveComponent* Primitive, float DeltaTime, float Speed, bool bGrounded) const;
 	void ApplySteeringAndDriftAssist(UPrimitiveComponent* Primitive, float DeltaTime, float Speed) const;
 	void ApplyNormalGripAssist(UPrimitiveComponent* Primitive, float DeltaTime) const;

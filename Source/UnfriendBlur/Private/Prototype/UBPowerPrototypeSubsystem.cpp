@@ -317,11 +317,11 @@ void UUBPowerPrototypeSubsystem::ConfigurePrototypeVehicleHandling(APawn* Anchor
 			VehicleMovement->SetAffectedBySteering(WheelIndex, bFrontWheel);
 			VehicleMovement->SetAffectedByEngine(WheelIndex, true);
 			VehicleMovement->SetAffectedByBrake(WheelIndex, true);
-			VehicleMovement->SetAffectedByHandbrake(WheelIndex, !bFrontWheel);
+			VehicleMovement->SetAffectedByHandbrake(WheelIndex, false);
 			VehicleMovement->SetWheelMaxSteerAngle(WheelIndex, bFrontWheel ? 44.0f : 0.0f);
 			VehicleMovement->SetWheelFrictionMultiplier(WheelIndex, bFrontWheel ? 3.25f : 2.82f);
 			VehicleMovement->SetWheelMaxBrakeTorque(WheelIndex, bFrontWheel ? 6800.0f : 5200.0f);
-			VehicleMovement->SetWheelHandbrakeTorque(WheelIndex, bFrontWheel ? 1200.0f : 6800.0f);
+			VehicleMovement->SetWheelHandbrakeTorque(WheelIndex, 0.0f);
 		}
 
 		VehicleMovement->SetMaxEngineTorque(920.0f);

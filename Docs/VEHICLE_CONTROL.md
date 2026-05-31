@@ -13,11 +13,13 @@ Este documento registra o ajuste rapido de dirigibilidade do prototipo.
 
 O componente `UUBArcadeVehicleAssistComponent` voltou a ser adicionado automaticamente no Play, mas agora com tres regras:
 
-- o input de `W/A/S/D/Space` e enviado diretamente para o `ChaosVehicleMovementComponent`;
+- o input de `W/A/S/D` e enviado diretamente para o `ChaosVehicleMovementComponent`;
 - enquanto o Blueprint do carro nao responde bem sozinho, existe um fallback fisico controlado para aceleracao e curva;
 - qualquer assist fisico precisa ter limite de velocidade/forca para nao explodir a simulacao;
 - o spawn do carro no prototipo usa clearance baixo para nao comecar caindo/flutuando;
 - o carro so e considerado apoiado quando esta perto do solo; ver o chao a distancia nao basta;
+- `Space` nao aciona mais handbrake fisico do Chaos enquanto a suspensao/base do carro nao estiver estavel;
+- se o carro nascer alguns centimetros acima do ideal, um assist leve faz ele assentar sem depender do jogador apertar `Space`;
 - toda rodada de teste do jogador local grava telemetria em `Saved/HandlingTelemetry.csv`.
 
 O prototipo tambem mostra uma linha amarela `Vehicle debug` durante o Play. Ela serve para diagnostico rapido do input e do estado do carro.
@@ -35,7 +37,7 @@ No log, o prototipo tambem registra os componentes de movimento/veiculo encontra
 ## Como testar de forma realista
 
 1. Abrir o projeto e jogar normalmente por 2 a 3 minutos.
-2. Forcar curvas fechadas, drift com `Space`, batidas leves na lateral da pista e retomada de velocidade.
+2. Forcar curvas fechadas, batidas leves na lateral da pista e retomada de velocidade.
 3. Fechar o Play.
 4. Analisar `Saved/HandlingTelemetry.csv`.
 
@@ -91,7 +93,7 @@ Regra daqui para frente:
 - Damping/cap de yaw para impedir o carro de continuar girando depois que o jogador solta A/D.
 - Clamp de velocidade planar, lateral e vertical somente quando o carro passa dos limites de seguranca.
 - Limitador especifico de velocidade no ar para impedir o carro de virar missil depois de uma lombada/borda.
-- `Space` aciona handbrake diretamente no Chaos Vehicle.
+- Temporariamente, `Space` nao aciona handbrake. O drift sera refeito depois que o carro base parar de flutuar/voar.
 - Telemetria de handling para comparar ajuste por ajuste.
 - `Shift` fica livre para virar olhar para tras quando conectarmos a camera/input final.
 
