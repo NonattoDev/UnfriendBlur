@@ -22,6 +22,7 @@ public class UnfriendBlur : ModuleRules
 		{
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			"ChaosVehicles",
 			"Slate"
 		});
 	}

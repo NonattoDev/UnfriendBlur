@@ -1,5 +1,6 @@
 #include "Prototype/UBPowerPrototypeSubsystem.h"
 
+#include "ChaosWheeledVehicleMovementComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
@@ -17,6 +18,7 @@
 #include "Powers/UBPowerPickup.h"
 #include "Powers/UBPowerTypes.h"
 #include "Prototype/UBPrototypeTargetCar.h"
+#include "Vehicle/UBArcadeVehicleAssistComponent.h"
 #include "Vehicle/UBVehicleHealthComponent.h"
 #include "Vehicle/UBVehicleStatusComponent.h"
 #include "Stats/Stats.h"
@@ -264,17 +266,72 @@ void UUBPowerPrototypeSubsystem::ConfigurePrototypeVehicleHandling(APawn* Anchor
 		return;
 	}
 
+	if (UUBArcadeVehicleAssistComponent* AssistComponent = UUBArcadeVehicleAssistComponent::FindOrCreateAssistComponent(AnchorPawn))
+	{
+		AssistComponent->SetAssistEnabled(true);
+	}
+
 	if (UPrimitiveComponent* RootPrimitive = Cast<UPrimitiveComponent>(AnchorPawn->GetRootComponent()))
 	{
 		if (RootPrimitive->IsSimulatingPhysics())
 		{
-			RootPrimitive->SetLinearDamping(0.12f);
-			RootPrimitive->SetAngularDamping(0.82f);
+			RootPrimitive->SetLinearDamping(0.06f);
+			RootPrimitive->SetAngularDamping(0.72f);
+			RootPrimitive->SetCenterOfMass(FVector(0.0f, 0.0f, -42.0f));
+			RootPrimitive->WakeAllRigidBodies();
 		}
 	}
 
+	if (UChaosWheeledVehicleMovementComponent* VehicleMovement = AnchorPawn->FindComponentByClass<UChaosWheeledVehicleMovementComponent>())
+	{
+		VehicleMovement->Mass = 1280.0f;
+		VehicleMovement->bEnableCenterOfMassOverride = true;
+		VehicleMovement->CenterOfMassOverride = FVector(0.0f, 0.0f, -42.0f);
+		VehicleMovement->InertiaTensorScale = FVector(1.45f, 1.65f, 0.72f);
+		VehicleMovement->DragCoefficient = 0.18f;
+		VehicleMovement->DownforceCoefficient = 4.2f;
+		VehicleMovement->bMechanicalSimEnabled = true;
+		VehicleMovement->EngineSetup.MaxTorque = 920.0f;
+		VehicleMovement->EngineSetup.MaxRPM = 7200.0f;
+		VehicleMovement->EngineSetup.EngineBrakeEffect = 0.03f;
+		VehicleMovement->EngineSetup.EngineRevUpMOI = 2.25f;
+		VehicleMovement->EngineSetup.EngineRevDownRate = 1200.0f;
+		VehicleMovement->TransmissionSetup.GearChangeTime = 0.12f;
+		VehicleMovement->TransmissionSetup.ChangeUpRPM = 6700.0f;
+		VehicleMovement->TransmissionSetup.ChangeDownRPM = 3200.0f;
+		VehicleMovement->SteeringSetup.SteeringType = ESteeringType::SingleAngle;
+		VehicleMovement->SteeringSetup.AngleRatio = 0.9f;
+
+		FRichCurve* SteeringCurve = VehicleMovement->SteeringSetup.SteeringCurve.GetRichCurve();
+		SteeringCurve->Reset();
+		SteeringCurve->AddKey(0.0f, 1.0f);
+		SteeringCurve->AddKey(35.0f, 0.96f);
+		SteeringCurve->AddKey(70.0f, 0.82f);
+		SteeringCurve->AddKey(110.0f, 0.62f);
+		SteeringCurve->AddKey(155.0f, 0.46f);
+
+		const int32 WheelCount = VehicleMovement->GetNumWheels();
+		for (int32 WheelIndex = 0; WheelIndex < WheelCount; ++WheelIndex)
+		{
+			const bool bFrontWheel = WheelIndex < 2;
+			VehicleMovement->SetAffectedBySteering(WheelIndex, bFrontWheel);
+			VehicleMovement->SetAffectedByEngine(WheelIndex, true);
+			VehicleMovement->SetAffectedByBrake(WheelIndex, true);
+			VehicleMovement->SetAffectedByHandbrake(WheelIndex, !bFrontWheel);
+			VehicleMovement->SetWheelMaxSteerAngle(WheelIndex, bFrontWheel ? 44.0f : 0.0f);
+			VehicleMovement->SetWheelFrictionMultiplier(WheelIndex, bFrontWheel ? 3.25f : 2.82f);
+			VehicleMovement->SetWheelMaxBrakeTorque(WheelIndex, bFrontWheel ? 6800.0f : 5200.0f);
+			VehicleMovement->SetWheelHandbrakeTorque(WheelIndex, bFrontWheel ? 1200.0f : 6800.0f);
+		}
+
+		VehicleMovement->SetMaxEngineTorque(920.0f);
+		VehicleMovement->SetDragCoefficient(0.18f);
+		VehicleMovement->SetDownforceCoefficient(4.2f);
+		VehicleMovement->ResetVehicle();
+	}
+
 	bConfiguredPrototypeVehicleHandling = true;
-	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Vehicle] Prototype damping tuned for %s"), *AnchorPawn->GetName());
+	UE_LOG(LogTemp, Log, TEXT("[UnfriendBlur Vehicle] Arcade handling assist enabled for %s"), *AnchorPawn->GetName());
 }
 
 bool UUBPowerPrototypeSubsystem::IsImportedDriftTrackWorld() const

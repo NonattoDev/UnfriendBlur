@@ -24,11 +24,7 @@ void UUBArcadeVehicleAssistComponent::BeginPlay()
 	}
 
 	CachedPrimitive = FindBestPrimitive();
-	if (CachedPrimitive)
-	{
-		CachedPrimitive->SetNotifyRigidBodyCollision(true);
-		CachedPrimitive->OnComponentHit.AddUniqueDynamic(this, &UUBArcadeVehicleAssistComponent::HandleOwnerComponentHit);
-	}
+	BindHitHandler();
 }
 
 void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -57,13 +53,31 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	const bool bGrounded = IsGrounded(GroundDistance);
 	const float Speed = Primitive->GetPhysicsLinearVelocity().Size2D();
 
+	ApplyThrottleBrakeAssist(Primitive, DeltaTime, bGrounded);
 	ApplyDownforce(Primitive, Speed, bGrounded);
 	ApplyAntiFlipStability(Primitive, bGrounded);
 	ApplyCurbLaunchClamp(Primitive, bGrounded, GroundDistance);
 	ApplyArcadeSteering(Primitive, DeltaTime, Speed, bGrounded);
 	ApplySteeringAndDriftAssist(Primitive, DeltaTime, Speed);
+	ApplyNormalGripAssist(Primitive, DeltaTime);
 
 	bWasGrounded = bGrounded;
+}
+
+void UUBArcadeVehicleAssistComponent::SetAssistEnabled(bool bEnabled)
+{
+	bAssistEnabled = bEnabled;
+	SetComponentTickEnabled(bAssistEnabled);
+
+	if (bAssistEnabled)
+	{
+		CachedPrimitive = FindBestPrimitive();
+		BindHitHandler();
+		if (CachedPrimitive)
+		{
+			CachedPrimitive->WakeAllRigidBodies();
+		}
+	}
 }
 
 UUBArcadeVehicleAssistComponent* UUBArcadeVehicleAssistComponent::FindOrCreateAssistComponent(AActor* OwnerActor)
@@ -87,6 +101,18 @@ UUBArcadeVehicleAssistComponent* UUBArcadeVehicleAssistComponent::FindOrCreateAs
 	OwnerActor->AddInstanceComponent(NewComponent);
 	NewComponent->RegisterComponent();
 	return NewComponent;
+}
+
+void UUBArcadeVehicleAssistComponent::BindHitHandler()
+{
+	UPrimitiveComponent* Primitive = CachedPrimitive.Get();
+	if (!Primitive)
+	{
+		return;
+	}
+
+	Primitive->SetNotifyRigidBodyCollision(true);
+	Primitive->OnComponentHit.AddUniqueDynamic(this, &UUBArcadeVehicleAssistComponent::HandleOwnerComponentHit);
 }
 
 UPrimitiveComponent* UUBArcadeVehicleAssistComponent::FindBestPrimitive() const
@@ -149,6 +175,7 @@ float UUBArcadeVehicleAssistComponent::GetSteeringInput() const
 	}
 
 	float Steering = 0.0f;
+	Steering += PlayerController->GetInputAnalogKeyState(EKeys::Gamepad_LeftX);
 	if (PlayerController->IsInputKeyDown(EKeys::A) || PlayerController->IsInputKeyDown(EKeys::Left))
 	{
 		Steering -= 1.0f;
@@ -162,6 +189,42 @@ float UUBArcadeVehicleAssistComponent::GetSteeringInput() const
 	return FMath::Clamp(Steering, -1.0f, 1.0f);
 }
 
+float UUBArcadeVehicleAssistComponent::GetThrottleInput() const
+{
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	const APlayerController* PlayerController = OwnerPawn ? Cast<APlayerController>(OwnerPawn->GetController()) : nullptr;
+	if (!PlayerController || !PlayerController->IsLocalController())
+	{
+		return 0.0f;
+	}
+
+	float Throttle = PlayerController->GetInputAnalogKeyState(EKeys::Gamepad_RightTriggerAxis);
+	if (PlayerController->IsInputKeyDown(EKeys::W) || PlayerController->IsInputKeyDown(EKeys::Up))
+	{
+		Throttle += 1.0f;
+	}
+
+	return FMath::Clamp(Throttle, 0.0f, 1.0f);
+}
+
+float UUBArcadeVehicleAssistComponent::GetBrakeInput() const
+{
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	const APlayerController* PlayerController = OwnerPawn ? Cast<APlayerController>(OwnerPawn->GetController()) : nullptr;
+	if (!PlayerController || !PlayerController->IsLocalController())
+	{
+		return 0.0f;
+	}
+
+	float Brake = PlayerController->GetInputAnalogKeyState(EKeys::Gamepad_LeftTriggerAxis);
+	if (PlayerController->IsInputKeyDown(EKeys::S) || PlayerController->IsInputKeyDown(EKeys::Down))
+	{
+		Brake += 1.0f;
+	}
+
+	return FMath::Clamp(Brake, 0.0f, 1.0f);
+}
+
 bool UUBArcadeVehicleAssistComponent::IsDriftInputDown() const
 {
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
@@ -169,6 +232,37 @@ bool UUBArcadeVehicleAssistComponent::IsDriftInputDown() const
 	return PlayerController
 		&& PlayerController->IsLocalController()
 		&& PlayerController->IsInputKeyDown(EKeys::SpaceBar);
+}
+
+void UUBArcadeVehicleAssistComponent::ApplyThrottleBrakeAssist(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const
+{
+	const AActor* OwnerActor = GetOwner();
+	if (!Primitive || !OwnerActor || !bGrounded)
+	{
+		return;
+	}
+
+	const FVector Forward = OwnerActor->GetActorForwardVector().GetSafeNormal2D();
+	const FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
+	const float Throttle = GetThrottleInput();
+	const float Brake = GetBrakeInput();
+
+	if (Throttle > 0.01f && ForwardSpeed < AssistMaxForwardSpeed)
+	{
+		const float SpeedScale = FMath::Clamp(1.0f - ForwardSpeed / AssistMaxForwardSpeed, 0.18f, 1.0f);
+		Primitive->AddForce(Forward * Primitive->GetMass() * ThrottleAssistAcceleration * Throttle * SpeedScale, NAME_None, false);
+	}
+
+	if (Brake > 0.01f && ForwardSpeed > 60.0f)
+	{
+		const float BrakeDelta = BrakeAssistAcceleration * Brake * DeltaTime;
+		const float NewForwardSpeed = FMath::Max(0.0f, ForwardSpeed - BrakeDelta);
+		const FVector Right = OwnerActor->GetActorRightVector().GetSafeNormal2D();
+		const float SideSpeed = FVector::DotProduct(Velocity, Right);
+		const FVector VerticalVelocity = FVector::UpVector * FVector::DotProduct(Velocity, FVector::UpVector);
+		Primitive->SetPhysicsLinearVelocity(Forward * NewForwardSpeed + Right * SideSpeed * 0.82f + VerticalVelocity, false);
+	}
 }
 
 void UUBArcadeVehicleAssistComponent::ApplyDownforce(UPrimitiveComponent* Primitive, float Speed, bool bGrounded) const
@@ -246,11 +340,15 @@ void UUBArcadeVehicleAssistComponent::ApplyArcadeSteering(UPrimitiveComponent* P
 
 	const FVector Forward = OwnerActor->GetActorForwardVector().GetSafeNormal2D();
 	const float ForwardSpeedSign = FVector::DotProduct(HorizontalVelocity.GetSafeNormal(), Forward) >= 0.0f ? 1.0f : -1.0f;
-	const float SpeedAlpha = FMath::Clamp(HorizontalSpeed / 5200.0f, 0.18f, 1.0f);
+	const float SpeedAlpha = FMath::Clamp(HorizontalSpeed / 3600.0f, 0.42f, 1.0f);
 	const float TurnDegrees = Steering * ForwardSpeedSign * ArcadeSteeringTurnRateDegrees * SpeedAlpha * DeltaTime;
 
 	const FVector TurnedHorizontalVelocity = HorizontalVelocity.RotateAngleAxis(TurnDegrees * ArcadeSteeringVelocityTurnBlend, FVector::UpVector);
 	Primitive->SetPhysicsLinearVelocity(FVector(TurnedHorizontalVelocity.X, TurnedHorizontalVelocity.Y, Velocity.Z), false);
+
+	const FRotator CurrentRotation = OwnerActor->GetActorRotation();
+	const FRotator TargetRotation(0.0f, CurrentRotation.Yaw + TurnDegrees, 0.0f);
+	const_cast<AActor*>(OwnerActor)->SetActorRotation(TargetRotation, ETeleportType::TeleportPhysics);
 
 	const FVector AngularVelocity = Primitive->GetPhysicsAngularVelocityInRadians();
 	const float TargetYawVelocity = FMath::DegreesToRadians(Steering * ForwardSpeedSign * ArcadeSteeringTurnRateDegrees * SpeedAlpha);
@@ -277,12 +375,20 @@ void UUBArcadeVehicleAssistComponent::ApplySteeringAndDriftAssist(UPrimitiveComp
 		return;
 	}
 
-	const float SpeedAlpha = FMath::Clamp(Speed / 4200.0f, 0.0f, 1.0f);
+	const float SpeedAlpha = FMath::Clamp(Speed / 3800.0f, 0.35f, 1.0f);
+	const FVector Velocity = Primitive->GetPhysicsLinearVelocity();
+	const FVector HorizontalVelocity(Velocity.X, Velocity.Y, 0.0f);
+	const float DriftTurnDegrees = Steering * DriftYawRateDegrees * SpeedAlpha * DeltaTime;
+	const FVector DriftedHorizontalVelocity = HorizontalVelocity.RotateAngleAxis(DriftTurnDegrees * DriftVelocityTurnBlend, FVector::UpVector);
+
+	const FRotator CurrentRotation = OwnerActor->GetActorRotation();
+	const_cast<AActor*>(OwnerActor)->SetActorRotation(FRotator(0.0f, CurrentRotation.Yaw + DriftTurnDegrees, 0.0f), ETeleportType::TeleportPhysics);
+	Primitive->SetPhysicsLinearVelocity(FVector(DriftedHorizontalVelocity.X, DriftedHorizontalVelocity.Y, Velocity.Z), false);
 	Primitive->AddTorqueInRadians(FVector::UpVector * Steering * DriftYawTorque, NAME_None, true);
 	Primitive->AddForce(OwnerActor->GetActorRightVector() * Steering * Primitive->GetMass() * DriftSideAcceleration * SpeedAlpha, NAME_None, false);
 }
 
-void UUBArcadeVehicleAssistComponent::ApplyNormalGripAssist(UPrimitiveComponent* Primitive) const
+void UUBArcadeVehicleAssistComponent::ApplyNormalGripAssist(UPrimitiveComponent* Primitive, float DeltaTime) const
 {
 	const AActor* OwnerActor = GetOwner();
 	if (!Primitive || !OwnerActor || IsDriftInputDown())
@@ -296,7 +402,8 @@ void UUBArcadeVehicleAssistComponent::ApplyNormalGripAssist(UPrimitiveComponent*
 	const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
 	const float SideSpeed = FVector::DotProduct(Velocity, Right);
 	const FVector VerticalVelocity = FVector::UpVector * FVector::DotProduct(Velocity, FVector::UpVector);
-	const FVector StabilizedVelocity = Forward * ForwardSpeed + Right * SideSpeed * NormalGripLateralDamping + VerticalVelocity;
+	const float FrameDamping = FMath::Pow(NormalGripLateralDamping, FMath::Max(DeltaTime, 0.0f) * 60.0f);
+	const FVector StabilizedVelocity = Forward * ForwardSpeed + Right * SideSpeed * FrameDamping + VerticalVelocity;
 	Primitive->SetPhysicsLinearVelocity(StabilizedVelocity, false);
 }
 

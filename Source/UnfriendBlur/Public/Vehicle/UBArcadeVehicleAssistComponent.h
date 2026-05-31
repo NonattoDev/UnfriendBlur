@@ -20,17 +20,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist")
 	bool bAssistEnabled = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float BaseDownforceAcceleration = 260.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
+	float ThrottleAssistAcceleration = 1800.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
+	float BrakeAssistAcceleration = 6200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Throttle")
+	float AssistMaxForwardSpeed = 7200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float SpeedDownforceCoefficient = 0.00008f;
+	float BaseDownforceAcceleration = 720.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float MaxDownforceAcceleration = 2400.0f;
+	float SpeedDownforceCoefficient = 0.00018f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
-	float AirDownforceAcceleration = 2800.0f;
+	float MaxDownforceAcceleration = 4800.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Downforce")
+	float AirDownforceAcceleration = 6800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Stability")
 	float RollPitchAngularDamping = 0.92f;
@@ -45,34 +54,43 @@ public:
 	float StrongUprightTorqueStrength = 9800.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
-	float GroundProbeDistance = 245.0f;
+	float GroundProbeDistance = 340.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
-	float MaxNearGroundUpVelocity = 720.0f;
+	float MaxNearGroundUpVelocity = 360.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Curb")
-	float WallHitNormalDamping = 0.45f;
+	float WallHitNormalDamping = 0.72f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
-	float ArcadeSteeringMinSpeed = 250.0f;
+	float ArcadeSteeringMinSpeed = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
-	float ArcadeSteeringTurnRateDegrees = 82.0f;
+	float ArcadeSteeringTurnRateDegrees = 152.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Steering")
-	float ArcadeSteeringVelocityTurnBlend = 0.82f;
+	float ArcadeSteeringVelocityTurnBlend = 0.74f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftMinSpeed = 1450.0f;
+	float DriftMinSpeed = 850.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftYawTorque = 3600.0f;
+	float DriftYawRateDegrees = 168.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
-	float DriftSideAcceleration = 140.0f;
+	float DriftYawTorque = 9200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
+	float DriftSideAcceleration = 620.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Drift")
+	float DriftVelocityTurnBlend = 0.28f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UnfriendBlur|Vehicle Assist|Grip")
-	float NormalGripLateralDamping = 0.985f;
+	float NormalGripLateralDamping = 0.935f;
+
+	UFUNCTION(BlueprintCallable, Category = "UnfriendBlur|Vehicle Assist")
+	void SetAssistEnabled(bool bEnabled);
 
 	UFUNCTION(BlueprintCallable, Category = "UnfriendBlur|Vehicle Assist", meta = (DefaultToSelf = "OwnerActor"))
 	static UUBArcadeVehicleAssistComponent* FindOrCreateAssistComponent(AActor* OwnerActor);
@@ -86,13 +104,17 @@ private:
 	UPrimitiveComponent* FindBestPrimitive() const;
 	bool IsGrounded(float& OutGroundDistance) const;
 	float GetSteeringInput() const;
+	float GetThrottleInput() const;
+	float GetBrakeInput() const;
 	bool IsDriftInputDown() const;
+	void BindHitHandler();
+	void ApplyThrottleBrakeAssist(UPrimitiveComponent* Primitive, float DeltaTime, bool bGrounded) const;
 	void ApplyDownforce(UPrimitiveComponent* Primitive, float Speed, bool bGrounded) const;
 	void ApplyAntiFlipStability(UPrimitiveComponent* Primitive, bool bGrounded) const;
 	void ApplyCurbLaunchClamp(UPrimitiveComponent* Primitive, bool bGrounded, float GroundDistance) const;
 	void ApplyArcadeSteering(UPrimitiveComponent* Primitive, float DeltaTime, float Speed, bool bGrounded) const;
 	void ApplySteeringAndDriftAssist(UPrimitiveComponent* Primitive, float DeltaTime, float Speed) const;
-	void ApplyNormalGripAssist(UPrimitiveComponent* Primitive) const;
+	void ApplyNormalGripAssist(UPrimitiveComponent* Primitive, float DeltaTime) const;
 
 	UFUNCTION()
 	void HandleOwnerComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
