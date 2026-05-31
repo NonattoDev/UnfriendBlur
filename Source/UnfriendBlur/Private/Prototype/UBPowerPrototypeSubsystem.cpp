@@ -85,8 +85,6 @@ void UUBPowerPrototypeSubsystem::Tick(float DeltaTime)
 		}
 
 		TryInventoryHotkeys(PlayerController);
-		DisplayInventory(PlayerController);
-		DisplayVehicleDiagnostics(PlayerController);
 	}
 }
 
