@@ -85,6 +85,10 @@ void UUBArcadeVehicleAssistComponent::TickComponent(float DeltaTime, ELevelTick 
 	{
 		ApplyNormalGripAssist(Primitive, DeltaTime);
 	}
+	if (bEnableYawStabilityAssist)
+	{
+		ApplyYawStabilityAssist(Primitive, DeltaTime);
+	}
 	ApplyVelocitySafetyClamp(Primitive);
 	RecordTelemetry(DeltaTime, Primitive, bGrounded, GroundDistance);
 
@@ -461,6 +465,28 @@ void UUBArcadeVehicleAssistComponent::ApplyNormalGripAssist(UPrimitiveComponent*
 	const float FrameDamping = FMath::Pow(NormalGripLateralDamping, FMath::Max(DeltaTime, 0.0f) * 60.0f);
 	const FVector StabilizedVelocity = Forward * ForwardSpeed + Right * SideSpeed * FrameDamping + VerticalVelocity;
 	Primitive->SetPhysicsLinearVelocity(StabilizedVelocity, false);
+}
+
+void UUBArcadeVehicleAssistComponent::ApplyYawStabilityAssist(UPrimitiveComponent* Primitive, float DeltaTime) const
+{
+	if (!Primitive)
+	{
+		return;
+	}
+
+	const FVector AngularVelocity = Primitive->GetPhysicsAngularVelocityInRadians();
+	const FVector YawVelocity = FVector::UpVector * FVector::DotProduct(AngularVelocity, FVector::UpVector);
+	const FVector RollPitchVelocity = AngularVelocity - YawVelocity;
+	const float SteeringAmount = FMath::Abs(GetSteeringInput());
+	const float Damping = IsDriftInputDown()
+		? SteeringYawAngularDamping
+		: FMath::Lerp(StraightYawAngularDamping, SteeringYawAngularDamping, SteeringAmount);
+	const float FrameDamping = FMath::Pow(Damping, FMath::Max(DeltaTime, 0.0f) * 60.0f);
+	const float MaxYawRate = FMath::DegreesToRadians(IsDriftInputDown() ? MaxDriftYawRateDegrees : MaxNormalYawRateDegrees);
+	const float CurrentYawRate = FVector::DotProduct(AngularVelocity, FVector::UpVector);
+	const float StabilizedYawRate = FMath::Clamp(CurrentYawRate * FrameDamping, -MaxYawRate, MaxYawRate);
+
+	Primitive->SetPhysicsAngularVelocityInRadians(RollPitchVelocity + FVector::UpVector * StabilizedYawRate, false);
 }
 
 void UUBArcadeVehicleAssistComponent::ApplyVelocitySafetyClamp(UPrimitiveComponent* Primitive) const

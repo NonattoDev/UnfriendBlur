@@ -86,6 +86,8 @@ Regra daqui para frente:
 - Amortecimento ao bater em parede/lateral da pista.
 - Fallback de aceleracao por `AddForce`, limitado por velocidade maxima.
 - Assist leve de curva por velocidade/angular velocity, sem teletransportar rotacao.
+- Grip lateral normal para impedir que o carro continue atravessado quando nao esta em drift.
+- Damping/cap de yaw para impedir o carro de continuar girando depois que o jogador solta A/D.
 - Clamp de velocidade planar, lateral e vertical somente quando o carro passa dos limites de seguranca.
 - `Space` aciona handbrake diretamente no Chaos Vehicle.
 - Telemetria de handling para comparar ajuste por ajuste.
