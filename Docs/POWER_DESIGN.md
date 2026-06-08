@@ -307,7 +307,7 @@ mas ainda tem chance real de se defender com habilidade.
 - O Shunt deve ser mais forte que Bolt, mas menos inevitavel que um raio global.
 - Deve perseguir de verdade, mas com limites para existir defesa.
 - Ao acertar:
-  - causa dano alto;
+  - causa hitkill quando chega com forca cheia;
   - capota o carro atingido;
   - pode jogar o carro para cima/frente/lado com impacto forte;
   - aplica slow forte por causa da capotagem e da perda de controle;
@@ -350,14 +350,14 @@ mas ainda tem chance real de se defender com habilidade.
 
 ### Parametros iniciais
 
-- Dano: alto.
+- Dano: hitkill no impacto cheio.
 - Slow: medio, 1.5s a 2.0s.
 - Alcance de busca: ajustar por mapa.
 - Vida do projetil: 2 pontos de Bolt.
 - Dano recebido de Bolt: 1 ponto.
 - Janela de curva perfeita: curta, ajustar em playtest.
 - Janela de nitro perfeito: curta, ajustar em playtest.
-- Impacto cheio: dano alto, capotagem e voo/impulso forte.
+- Impacto cheio: hitkill, capotagem e voo/impulso forte.
 - Impacto enfraquecido por 1 Bolt: dano reduzido, perda de traseira/estabilidade,
   sem capotar e sem jogar o carro para o alto.
 
@@ -386,7 +386,7 @@ mas ainda tem chance real de se defender com habilidade.
 - Ja tem homing simples.
 - Ja respeita frente/tras pela direcao de spawn.
 - Ja aplica impulso forte.
-- Ja aplica dano alto e slow forte no hit cheio.
+- Ja aplica hitkill e slow forte no hit cheio.
 - Ja aplica dano/slow reduzidos no hit enfraquecido por Bolt.
 - Ainda nao tem target selection real.
 - Ainda nao sabe quem esta a frente no ranking.

@@ -415,7 +415,10 @@ void UUBPowerInventoryComponent::ApplyPowerGameplayOutcome(EUBPowerType PowerTyp
 	{
 		if (UUBVehicleHealthComponent* HealthComponent = UUBVehicleHealthComponent::FindOrCreateHealthComponent(OwnerActor))
 		{
-			HealthComponent->ApplyDamage(Damage, SourceActor, PowerType);
+			const float AppliedDamage = PowerType == EUBPowerType::Shunt && !bWeakenedHit
+				? FMath::Max(Damage, HealthComponent->GetCurrentHealth())
+				: Damage;
+			HealthComponent->ApplyDamage(AppliedDamage, SourceActor, PowerType);
 		}
 	}
 

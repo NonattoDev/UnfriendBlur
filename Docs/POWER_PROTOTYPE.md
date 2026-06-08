@@ -47,7 +47,7 @@ Durante o Play, a tela mostra uma linha de debug com os 3 slots. O slot selecion
 - Shunt agora tem protecoes: 1 Bolt enfraquece, 2 Bolts destroem, mina armada destroi e Barge funciona como pulso/PEM temporario. Shock/raio nao afeta o Shunt.
 - Shield ja participa da regra: quando um alvo com shield ativo recebe hit, o hit e bloqueado.
 - Repair ja recupera vida real usando `UUBVehicleHealthComponent`; Super Repair tambem limpa slow/status negativo.
-- Bolt, Boost, Shunt, Mine, Barge e Shock ja aplicam dano/slow basico quando acertam um alvo com componentes do prototipo.
+- Bolt, Boost, Mine, Barge e Shock ja aplicam dano/slow basico quando acertam um alvo com componentes do prototipo. Shunt cheio volta a ser hitkill; Shunt enfraquecido por Bolt continua com dano/impacto reduzidos.
 - A linha amarela `Vehicle debug` mostra HP e slow do carro do jogador quando esses componentes existem.
 - O componente de poderes e criado automaticamente em runtime para teste, sem precisar editar o Blueprint do carro agora.
 - O pickup nao mostra mais letras flutuantes. Ele usa orb/luz colorida e, depois que os PNGs forem importados pelo Unreal, mostra o icone do poder como billboard.
